@@ -60,6 +60,11 @@ async function processLaw(raw) {
   // Với luật thì lấy lawNameDisplay đã tính (port dòng setLawNameDisplayText trong once page).
   if (/luật/gim.test(lawInfo.lawKind || "")) lawInfo.lawNameDisplay = f.lawNameDisplay;
 
+  // Cho phép override lawDayActive (ngày hiệu lực) nếu người dùng nhập tay ở màn sửa.
+  if (raw.lawDayActive && String(raw.lawDayActive).trim()) {
+    lawInfo.lawDayActive = String(raw.lawDayActive).trim();
+  }
+
   const output = result.partTwo;
   const isOfficial = /^\d+\/(TAND|VKS).+\-/gim.test(lawInfo.lawNumber || "");
   const converted = isOfficial

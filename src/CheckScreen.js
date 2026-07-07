@@ -11,16 +11,14 @@ import {
 import { CHECK_BUTTONS, URL_MAP } from "./config";
 import { check } from "./api";
 
-type Props = { onOpenLaw: (url: string) => void };
-
-export default function CheckScreen({ onOpenLaw }: Props) {
+export default function CheckScreen({ onOpenLaw }) {
   const [url, setUrl] = useState("");
-  const [items, setItems] = useState<[string, string][]>([]);
+  const [items, setItems] = useState([]);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function runCheck(target: string) {
+  async function runCheck(target) {
     if (!target) return;
     setLoading(true);
     setError("");
@@ -33,7 +31,7 @@ export default function CheckScreen({ onOpenLaw }: Props) {
           ? `⚠ Lọc trùng lỗi (Mongo): ${dedupError} — đang hiện tất cả ${total}`
           : `${total} văn bản • ${hidden} đã có (ẩn) • ${total - hidden} mới`,
       );
-    } catch (e: any) {
+    } catch (e) {
       setError(e.message || String(e));
       setItems([]);
     } finally {

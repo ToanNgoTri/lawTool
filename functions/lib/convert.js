@@ -36,11 +36,22 @@ function getRoleSign(contentRoleSign, nameSign) {
   for (let a = 0; a < nameSign.length; a++) {
     // console.log('nameSign',nameSign);
 
-    contentRoleSign = contentRoleSign.replace(/(\n|\t)+/gim, "\n");
+    // Chuẩn hoá trước khi gộp: CRLF -> LF; mọi khoảng trắng-ngang KỂ CẢ &nbsp;
+    // ( ) -> 1 space; trim quanh xuống dòng; gộp dòng trống. Nếu không, dòng
+    // trống chứa nbsp/space (hoặc \r) sẽ không bị gộp -> "dòng ngay trên tên"
+    // thành dòng rỗng -> roleSign ra rỗng thay vì chức vụ (vd "BỘ TRƯỞNG").
+    // [^\S\n] = mọi ký tự khoảng trắng trừ \n (space, tab, \r,  , ...).
+    contentRoleSign = contentRoleSign
+      .replace(/\r\n?/g, "\n")
+      .replace(/[^\S\n]+/g, " ")
+      .replace(/ *\n */g, "\n")
+      .replace(/\n+/g, "\n");
 
     // console.log(contentRoleSign,nameSign[a])
     // Không tìm thấy dòng chức vụ trước tên (vd Dự thảo không có người ký) -> để trống, không sập.
-    const _rsMatch = contentRoleSign.match(new RegExp(`.*(?=\n.*${nameSign[a]})`, "img"));
+    // Chuẩn hoá khoảng trắng trong tên (nbsp giữa các chữ) để khớp với text đã chuẩn hoá.
+    const _name = String(nameSign[a]).replace(/\s+/g, " ").trim();
+    const _rsMatch = contentRoleSign.match(new RegExp(`.*(?=\n.*${_name})`, "img"));
     if (!_rsMatch) {
       roleSign.push("");
       continue;

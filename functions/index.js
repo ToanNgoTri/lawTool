@@ -103,6 +103,17 @@ exports.scrapeLaw = onRequest({ cors: true, timeoutSeconds: 60 }, async (req, re
     const url = req.query.url;
     if (!url) return res.status(400).json({ success: false, error: "Thiếu ?url=" });
     const data = await scrape.scrapeDetail(String(url));
+
+    // Tính sẵn lawDayActive (ngày hiệu lực) để màn sửa hiển thị & sửa được ngay —
+    // không scrape trực tiếp được, phải suy từ nội dung + ngày ký.
+    try {
+      const daySign = String(data.lawDaySign || "").replace(/\s/g, "");
+      const da = convert.getLawDayActive(data.content || "", daySign);
+      data.lawDayActive = da instanceof Date && !isNaN(da) ? da.toISOString() : "";
+    } catch {
+      data.lawDayActive = "";
+    }
+
     res.json({ success: true, data });
   } catch (err) {
     sendErr(res, err);

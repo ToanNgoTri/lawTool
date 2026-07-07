@@ -8,6 +8,8 @@ export type RawLaw = {
   lawKind: string;
   nameSign: string;
   lawDaySign: string;
+  lawDayActive: string; // không scrape được; tính khi processLaw, có thể override
+  lawNameDisplay: string; // tên hiển thị, tính khi processLaw
   lawDescription: string;
   lawRelated: string;
   roleSign: string;

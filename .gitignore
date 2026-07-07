@@ -73,3 +73,12 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+project2-197c0-firebase-adminsdk-wgo9a-ddd9ec03a8.json
+openrouterAPIKey.json
+# Secrets — KHÔNG commit
+.env
+.env.*
+!.env.example
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+serviceAccount*.json

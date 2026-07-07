@@ -486,7 +486,12 @@ function convertPartOne(contentInputText) {
   let b1 = b.replace(/^ */gim, ""); // bỏ các space ở đầu mỗi dòng
   let b2 = b1.replace(/\(*đã k(ý|í)\)*/gim, "");
   b2 = b2.replace(/\[daky\]/gim, "");
-  let b3 = b2.replace(/^\s*nơi nhận.*\n([^\s].*\n)*/gim, "");
+  // Bỏ TOÀN BỘ khối cuối văn bản kể từ "Nơi nhận" đến hết (danh sách nơi nhận +
+  // chức vụ + tên người ký). Trước đây dùng /nơi nhận.*\n([^\s].*\n)*/ chỉ dừng ở
+  // dòng trống -> khi khối chữ ký nằm sát danh sách nơi nhận (không có dòng trống
+  // ngăn cách) thì dòng chức vụ bị nuốt nhưng tên người ký còn sót lại, dính ngay
+  // dưới dòng nội dung cuối -> convertPartTwo xoá "dòng trên tên" làm mất nội dung.
+  let b3 = b2.replace(/^\s*nơi nhận[\s\S]*$/im, "");
   let b4 = b3.replace(/\n+\s+$/gim, "");
   let b5 = b4.replace(/\n*$/gim, ""); //bỏ xuống dòng ở cuối
   let b6 = b5.replace(/^\s*/gim, ""); // bỏ space, xuống dòng ở đầu
@@ -649,7 +654,12 @@ function convertPartOneOfficialDispatch(contentInputText) {
   let b1 = b.replace(/^ */gim, ""); // bỏ các space ở đầu mỗi dòng
   let b2 = b1.replace(/\(*đã k(ý|í)\)*/gim, "");
   b2 = b2.replace(/\[daky\]/gim, "");
-  let b3 = b2.replace(/^\s*nơi nhận.*\n([^\s].*\n)*/gim, "");
+  // Bỏ TOÀN BỘ khối cuối văn bản kể từ "Nơi nhận" đến hết (danh sách nơi nhận +
+  // chức vụ + tên người ký). Trước đây dùng /nơi nhận.*\n([^\s].*\n)*/ chỉ dừng ở
+  // dòng trống -> khi khối chữ ký nằm sát danh sách nơi nhận (không có dòng trống
+  // ngăn cách) thì dòng chức vụ bị nuốt nhưng tên người ký còn sót lại, dính ngay
+  // dưới dòng nội dung cuối -> convertPartTwo xoá "dòng trên tên" làm mất nội dung.
+  let b3 = b2.replace(/^\s*nơi nhận[\s\S]*$/im, "");
   let b4 = b3.replace(/\n+\s+$/gim, "");
   let b5 = b4.replace(/\n*$/gim, ""); //bỏ xuống dòng ở cuối
   let b6 = b5.replace(/^\s*/gim, ""); // bỏ space, xuống dòng ở đầu
@@ -779,16 +789,20 @@ async function convertBareTextInfo(
       .trim();
   }
 
-  roleSign = getRoleSign(partOne, nameSignArrayDemo);
+  // Trích chức vụ/người ký/đơn vị từ TOÀN VĂN BẢN (inputText) chứ không từ
+  // partOne: convertPartOne cắt khối "Nơi nhận" và (khi không có dòng trống ngăn
+  // cách) nuốt luôn dòng chức vụ "BỘ TRƯỞNG" -> getRoleSign neo nhầm sang dòng
+  // nội dung ngay trên tên. Dùng inputText giống nhánh normal (feed cả khối chữ ký).
+  roleSign = getRoleSign(inputText, nameSignArrayDemo);
 
   nameSign = getArrangeUnitPublic(
-    partOne,
+    inputText,
     nameSignArrayDemo,
     lawKind,
     unitPublishAray,
   )["nameSign"];
   unitPublish = getArrangeUnitPublic(
-    partOne,
+    inputText,
     nameSignArrayDemo,
     lawKind,
     unitPublishAray,

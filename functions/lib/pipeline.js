@@ -32,7 +32,14 @@ function prepFields(raw) {
     lawNameDisplay = `${lawKind} số ${lawNumber}`;
   }
 
-  const contentText = String(raw.content || "").replace(/(^\s*|\s*$)/gim, "");
+  // Chỉ chuẩn hoá khoảng trắng NGANG đầu/cuối mỗi dòng (giữ nguyên \n và dòng
+  // trống). KHÔNG dùng /(^\s*|\s*$)/gim: \s gồm cả \n nên nó xoá luôn các dòng
+  // trống -> dồn "BỘ TRƯỞNG" và tên người ký vào 1 dòng -> getRoleSign (tìm chức
+  // vụ ở dòng ngay trên tên) trả về rỗng khi dồn cả văn bản vào field content.
+  const contentText = String(raw.content || "")
+    .replace(/[^\S\n]+$/gm, "")
+    .replace(/^[^\S\n]+/gm, "")
+    .trim();
 
   return { unitPublish, lawDaySign, nameSign, lawDescription, lawNumber, lawKind, lawNameDisplay, contentText };
 }

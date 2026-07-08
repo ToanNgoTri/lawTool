@@ -2,22 +2,37 @@
 // (getValueinArea + getInfo + clickToConvertContent) để chạy server-side.
 
 const convert = require("./convert");
-const ObjectLawPair = require("./ObjectLawPair.json");
+// ObjectLawPair KHÔNG còn bundle sẵn từ JSON. Bản đồ tra "luật liên quan" giờ
+// dựng từ Mongo (LawMachine.LawSearchDescription) để web + RN dùng chung, luôn
+// cập nhật. index.js nạp/cache map rồi truyền vào processLaw().
 
 // Port getValueinArea(): chuẩn hoá các trường thô + dựng lawNameDisplay.
 function prepFields(raw) {
-  const unitPublish = String(raw.unitPublish || "")
-    .split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const lawKind = String(raw.lawKind || "").replace(/(^\s*|\s*$)/g, "");
+
+  // Tách cơ quan ban hành / tên người ký (khớp nextLawTool splitUnitOrName):
+  //  - Thông tư LIÊN TỊCH: các cơ quan/tên phân tách bằng dấu ",". Riêng
+  //    "Bộ Văn hóa, Thể thao và Du lịch" có sẵn dấu phẩy trong tên -> tạm thay bằng
+  //    placeholder để không bị tách nhầm, xong khôi phục lại.
+  //  - Các loại khác: tách bằng ";" như cũ.
+  const splitUnitOrName = (text) => {
+    const s = String(text || "");
+    if (/liên tịch/i.test(lawKind)) {
+      const PLACEHOLDER = "__VHTTDL__";
+      return s
+        .replace(/Bộ Văn hóa, Thể thao và Du lịch/gi, (m) => m.replace(/,/g, PLACEHOLDER))
+        .split(/[,]/)
+        .map((item) => item.replace(new RegExp(PLACEHOLDER, "g"), ",").trim())
+        .filter(Boolean);
+    }
+    return s.split(/[;]/).map((item) => item.trim()).filter(Boolean);
+  };
+
+  const unitPublish = splitUnitOrName(raw.unitPublish);
   const lawDaySign = String(raw.lawDaySign || "").replace(/\s/g, "");
-  const nameSign = String(raw.nameSign || "")
-    .split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const nameSign = splitUnitOrName(raw.nameSign);
   const lawDescription = String(raw.lawDescription || "");
   const lawNumber = String(raw.lawNumber || "").replace(/\s/g, "");
-  const lawKind = String(raw.lawKind || "").replace(/(^\s*|\s*$)/g, "");
 
   const yearMatch = lawDaySign.match(/\d+$/);
   const year = yearMatch ? yearMatch[0] : "";
@@ -45,7 +60,9 @@ function prepFields(raw) {
 }
 
 // Port getInfo() + clickToConvertContent(): trả về mọi thứ cần để review + push.
-async function processLaw(raw) {
+// objectLawPair: bản đồ tra luật liên quan, do index.js nạp từ Mongo và truyền vào.
+async function processLaw(raw, objectLawPair) {
+  const ObjectLawPair = objectLawPair || {};
   const f = prepFields(raw);
   const roleSignText = String(raw.roleSign || "");
   const lawRelatedText = String(raw.lawRelated || "");

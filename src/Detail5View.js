@@ -620,7 +620,7 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
                                   style={{
                                     ...styles.ModalInfoContentLawRelated,
                                     textAlign: "justify",
-                                    fontWeight: "600",
+                                    fontWeight: isZero ? "400" : "600",
                                     fontStyle: "italic",
                                     lineHeight: 22,
                                     paddingLeft: 0,
@@ -628,7 +628,7 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
                                   }}
                                 >
                                   {isZero
-                                    ? `- ${String(key).toLowerCase()}`
+                                    ? `- ${key}`
                                     : `- ${key}: ${String(nameLaw)}`}
                                 </Text>
                               </View>

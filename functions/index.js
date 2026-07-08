@@ -54,6 +54,53 @@ function getMongo() {
   return mongoClientPromise;
 }
 
+// ─── ObjectLawPair: bản đồ tra "luật liên quan" ─────────────────────────────────
+// Trước đây bundle sẵn functions/lib/ObjectLawPair.json (read-only, đóng băng theo
+// mỗi lần deploy -> lỗi thời). Giờ dựng trực tiếp từ Mongo LawMachine.LawSearchDescription
+// — CHÍNH collection mà pushLaw đã ghi và backend web đang đối chiếu -> web + RN dùng
+// chung một nguồn, tự cập nhật sau mỗi push, không cần collection/migration riêng.
+//
+// Map 2 CHIỀU — khớp hệt nextLawTool /api/getlawjson để convert.getLawRelated
+// resolve được cả trích dẫn dạng TÊN lẫn dạng SỐ HIỆU:
+//   - normalize(lawNameDisplay) -> _id  : chỉ với luật có chữ "Luật". Nhờ chiều này,
+//     trích dẫn "Căn cứ Luật ... năm YYYY" (không có số hiệu trong văn bản) được
+//     nhánh 1 của getLawRelated tra ra số hiệu -> { số hiệu: tên trích dẫn }.
+//   - _id -> lawDescription             : trích dẫn bằng số hiệu -> lấy mô tả DB.
+// Số hiệu là key sạch (không dấu cách) nên qua được bộ lọc cuối; trích dẫn không
+// tra được vẫn ở dạng { số hiệu: 0 }. Trích dẫn dạng tên KHÔNG khớp DB (key có dấu
+// cách) bị bộ lọc cuối loại — đúng như nextLawTool.
+//
+// Cache trong RAM mỗi warm instance, refresh sau TTL để bắt bản push từ nền tảng khác.
+let _lawPairCache = null;
+let _lawPairLoadedAt = 0;
+const LAW_PAIR_TTL_MS = 10 * 60 * 1000; // 10 phút
+
+async function getObjectLawPair() {
+  if (_lawPairCache && Date.now() - _lawPairLoadedAt < LAW_PAIR_TTL_MS) {
+    return _lawPairCache;
+  }
+  const client = await getMongo();
+  const rows = await client
+    .db("LawMachine")
+    .collection("LawSearchDescription")
+    .find({}, { projection: { _id: 1, "info.lawNameDisplay": 1, "info.lawDescription": 1 } })
+    .toArray();
+  const map = {};
+  for (const r of rows) {
+    const info = r.info || {};
+    const lawNameDisplay = info.lawNameDisplay || "";
+    const lawDescription = info.lawDescription || "";
+    if (lawNameDisplay.match(/Luật/gim)) {
+      map[lawNameDisplay.toLowerCase().replace(/( và| của|,|&)/gim, "")] = r._id;
+    }
+    map[r._id] = lawDescription;
+  }
+  _lawPairCache = map;
+  _lawPairLoadedAt = Date.now();
+  console.log(`ObjectLawPair dựng từ LawSearchDescription: ${rows.length} mục`);
+  return map;
+}
+
 function sendErr(res, err, code = 500) {
   logger.error(err);
   res.status(code).json({ success: false, error: err?.message || String(err) });
@@ -147,7 +194,8 @@ exports.processLaw = onRequest(
   async (req, res) => {
     try {
       const raw = req.body || {};
-      const result = await pipeline.processLaw(raw);
+      const objectLawPair = await getObjectLawPair();
+      const result = await pipeline.processLaw(raw, objectLawPair);
       res.json({ success: true, ...result });
     } catch (err) {
       sendErr(res, err);
@@ -209,8 +257,20 @@ exports.pushLaw = onRequest(
         console.error("❌ pushLawChunk (Firestore) lỗi:", e);
       }
 
-      // 3) Push -> MongoDB (3 collection: LawCollection, LawSearchContent, LawSearchDescription)
+      // 3) Push -> MongoDB (3 collection: LawCollection, LawSearchContent, LawSearchDescription).
+      //    LawSearchDescription cũng chính là nguồn của ObjectLawPair -> văn bản vừa push
+      //    tự động được nhận diện là "luật liên quan" về sau, không cần bước ghi riêng
+      //    (thay hẳn addJSONFile cũ). Cập nhật luôn cache in-memory nếu instance này đã nạp.
       const mongoOk = await pushMongo(lawInfo, data, fullText, lawNumberForPush);
+      // Cập nhật cache in-memory theo ĐÚNG cấu trúc 2 chiều của getObjectLawPair()
+      // (khớp nextLawTool /api/getlawjson): tên -> số hiệu (chỉ luật), số hiệu -> mô tả.
+      if (mongoOk && _lawPairCache) {
+        const nameDisplay = lawInfo.lawNameDisplay || "";
+        if (nameDisplay.match(/Luật/gim)) {
+          _lawPairCache[nameDisplay.toLowerCase().replace(/( và| của|,|&)/gim, "")] = lawNumberForPush;
+        }
+        _lawPairCache[lawNumberForPush] = lawInfo.lawDescription || "";
+      }
 
       res.json({
         success: firestoreOk && mongoOk,

@@ -1,5 +1,4 @@
 node_modules
 lib/convert.js
-lib/ObjectLawPair.json
 _test_*.js
 _explore*.js

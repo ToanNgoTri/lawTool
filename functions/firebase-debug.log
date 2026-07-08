@@ -1,0 +1,17 @@
+[debug] [2026-07-08T15:15:53.592Z] ----------------------------------------------------------------------
+[debug] [2026-07-08T15:15:53.594Z] Command:       D:\Program Files\nodejs\node.exe C:\Users\ngotr\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-07-08T15:15:53.594Z] CLI Version:   15.22.4
+[debug] [2026-07-08T15:15:53.594Z] Platform:      win32
+[debug] [2026-07-08T15:15:53.594Z] Node Version:  v24.14.0
+[debug] [2026-07-08T15:15:53.594Z] Detected Agent: unknown
+[debug] [2026-07-08T15:15:53.595Z] Time:          Wed Jul 08 2026 22:15:53 GMT+0700 (Giờ Đông Dương)
+[debug] [2026-07-08T15:15:53.595Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-08T15:15:55.982Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-08T15:15:55.983Z] > authorizing via signed-in user (ngotritoan33@gmail.com)
+[debug] [2026-07-08T15:15:55.983Z] [iam] checking project lawtool-f8b15 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-07-08T15:15:55.984Z] Checked if tokens are valid: true, expires at: 1783524908066
+[debug] [2026-07-08T15:15:55.984Z] Checked if tokens are valid: true, expires at: 1783524908066
+[debug] [2026-07-08T15:15:55.985Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawtool-f8b15:testIamPermissions [none]
+[debug] [2026-07-08T15:15:55.985Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawtool-f8b15:testIamPermissions  x-goog-user-project=lawtool-f8b15
+[debug] [2026-07-08T15:15:55.985Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawtool-f8b15:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}

@@ -51,7 +51,7 @@ const EMPTY = {
 
 const toISO = (d) => (d ? (typeof d === "string" ? d : new Date(d).toISOString()) : "");
 
-export default function LawScreen({ url, onBack }) {
+export default function LawScreen({ url, onBack, onPushed }) {
   const [raw, setRaw] = useState(EMPTY);
   const [processed, setProcessed] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -178,6 +178,8 @@ export default function LawScreen({ url, onBack }) {
         return;
       }
       if (r.success) {
+        // Push xong -> xóa item này khỏi danh sách màn hình chính.
+        onPushed?.(url);
         Alert.alert("Thành công", `Đã push ${r.lawNumberForPush}\n${r.chunks} chunks lên Firestore + Mongo`, [
           { text: "OK", onPress: onBack },
         ]);
@@ -255,13 +257,21 @@ export default function LawScreen({ url, onBack }) {
         <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* Nút cuộn lên đầu */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-      >
-        <Text style={styles.fabText}>↑</Text>
-      </TouchableOpacity>
+      {/* Nút cuộn lên đầu / xuống cuối */}
+      <View style={styles.fabColumn}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+        >
+          <Text style={styles.fabText}>↑</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        >
+          <Text style={styles.fabText}>↓</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -288,10 +298,13 @@ const styles = StyleSheet.create({
   inputBig: { minHeight: 90, textAlignVertical: "top" },
   hint: { color: "#888", fontSize: 12, marginTop: 10, textAlign: "center" },
   error: { color: "#ff6b6b", marginVertical: 6 },
-  fab: {
+  fabColumn: {
     position: "absolute",
     right: 16,
     bottom: 24,
+    gap: 12,
+  },
+  fab: {
     width: 48,
     height: 48,
     borderRadius: 24,

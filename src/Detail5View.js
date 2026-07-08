@@ -265,28 +265,6 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
 
   return (
     <View style={{ flex: 1, position: "relative", backgroundColor: "white" }}>
-      {pushing && (
-        <View
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0,
-            opacity: 0.7,
-            backgroundColor: "black",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 10,
-          }}
-        >
-          <Text style={{ color: "white", marginBottom: 15, fontWeight: "bold" }}>
-            Đang push, vui lòng đợi ...
-          </Text>
-          <ActivityIndicator size="large" color="white" />
-        </View>
-      )}
-
       <View style={{ flex: 1, position: "relative", backgroundColor: "white" }}>
         <View
           style={{
@@ -324,14 +302,18 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
               backgroundColor: exists ? "#C62828" : "#009933",
               height: 36,
               paddingHorizontal: 16,
+              minWidth: 90,
+              flexDirection: "row",
+              gap: 8,
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 30,
-              opacity: pushing ? 0.5 : 1,
+              opacity: pushing ? 0.7 : 1,
             }}
             disabled={pushing}
             onPress={onPush}
           >
+            {pushing && <ActivityIndicator size="small" color="white" />}
             <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>
               {pushing ? "Đang push..." : exists ? "Push (ghi đè)" : "Push"}
             </Text>
@@ -441,6 +423,14 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
             }}
           >
             <Text style={styles.innerTab}>↑</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => {
+              if (list.current) list.current.scrollToEnd({ animated: true });
+            }}
+          >
+            <Text style={styles.innerTab}>↓</Text>
           </TouchableOpacity>
         </View>
 
@@ -614,25 +604,36 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
                       }}
                     >
                       {Info &&
-                        Object.keys(Info["lawRelated"]).map((key, i) => {
-                          const nameLaw = Info["lawRelated"][key];
-                          return (
-                            <View key={`${i}lawRelated`}>
-                              <Text
-                                style={{
-                                  ...styles.ModalInfoContentLawRelated,
-                                  textAlign: "justify",
-                                  fontWeight: "600",
-                                  fontStyle: "italic",
-                                  lineHeight: 22,
-                                  paddingLeft: 0,
-                                }}
-                              >
-                                - {key}: {String(nameLaw)}
-                              </Text>
-                            </View>
-                          );
-                        })}
+                        Object.entries(Info["lawRelated"])
+                          // value = 0 (chưa map số hiệu) hiển thị đầu tiên — chỉ đổi
+                          // thứ tự hiển thị, không ảnh hưởng dữ liệu gốc lawRelated.
+                          .sort((a, b) => {
+                            const az = a[1] === 0 || a[1] === "0" ? 0 : 1;
+                            const bz = b[1] === 0 || b[1] === "0" ? 0 : 1;
+                            return az - bz;
+                          })
+                          .map(([key, nameLaw], i) => {
+                            const isZero = nameLaw === 0 || nameLaw === "0";
+                            return (
+                              <View key={`${i}lawRelated`}>
+                                <Text
+                                  style={{
+                                    ...styles.ModalInfoContentLawRelated,
+                                    textAlign: "justify",
+                                    fontWeight: "600",
+                                    fontStyle: "italic",
+                                    lineHeight: 22,
+                                    paddingLeft: 0,
+                                    textTransform: "none",
+                                  }}
+                                >
+                                  {isZero
+                                    ? `- ${String(key).toLowerCase()}`
+                                    : `- ${key}: ${String(nameLaw)}`}
+                                </Text>
+                              </View>
+                            );
+                          })}
                     </View>
                   </View>
                 )}

@@ -3,7 +3,7 @@
  * Backend: Firebase Functions (functions/index.js).
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StatusBar, StyleSheet, BackHandler, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import CheckScreen from "./src/CheckScreen";
@@ -11,6 +11,7 @@ import LawScreen from "./src/LawScreen";
 
 function App() {
   const [lawUrl, setLawUrl] = useState(null);
+  const checkRef = useRef(null);
 
   // Nút back cứng (Android): đang ở màn luật -> quay về danh sách (giữ nguyên
   // data danh sách vì CheckScreen không bị unmount). Ở danh sách -> thoát app.
@@ -32,7 +33,7 @@ function App() {
       <View style={styles.container}>
         {/* CheckScreen LUÔN mounted -> giữ nguyên danh sách đã lấy khi back về */}
         <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-          <CheckScreen onOpenLaw={(url) => setLawUrl(url)} />
+          <CheckScreen ref={checkRef} onOpenLaw={(url) => setLawUrl(url)} />
         </SafeAreaView>
 
         {/* LawScreen phủ lên trên khi mở 1 văn bản */}
@@ -41,7 +42,12 @@ function App() {
             style={[StyleSheet.absoluteFill, styles.container]}
             edges={["top", "left", "right"]}
           >
-            <LawScreen key={lawUrl} url={lawUrl} onBack={() => setLawUrl(null)} />
+            <LawScreen
+              key={lawUrl}
+              url={lawUrl}
+              onBack={() => setLawUrl(null)}
+              onPushed={(url) => checkRef.current?.removeByHref(url)}
+            />
           </SafeAreaView>
         )}
       </View>

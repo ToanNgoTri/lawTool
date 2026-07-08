@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import {
   View,
   Text,
@@ -11,12 +11,18 @@ import {
 import { CHECK_BUTTONS, URL_MAP } from "./config";
 import { check } from "./api";
 
-export default function CheckScreen({ onOpenLaw }) {
+const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
   const [url, setUrl] = useState("");
   const [items, setItems] = useState([]);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Cho phép màn ngoài (App) xóa 1 item khỏi danh sách sau khi push thành công.
+  useImperativeHandle(ref, () => ({
+    removeByHref: (href) =>
+      setItems((prev) => prev.filter(([, h]) => h !== href)),
+  }));
 
   async function runCheck(target) {
     if (!target) return;
@@ -88,7 +94,9 @@ export default function CheckScreen({ onOpenLaw }) {
       </ScrollView>
     </View>
   );
-}
+});
+
+export default CheckScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 12, backgroundColor: "#141414" },

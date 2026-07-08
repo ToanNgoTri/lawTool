@@ -63,7 +63,12 @@ const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
           <TouchableOpacity
             key={b.key}
             style={styles.btn}
-            onPress={() => runCheck(b.key === "manual" ? url : URL_MAP[b.key])}
+            onPress={() => {
+              const target = b.key === "manual" ? url : URL_MAP[b.key];
+              // Hiện text link lên ô input (kể cả khi bấm preset Nghị Định...).
+              if (b.key !== "manual") setUrl(target);
+              runCheck(target);
+            }}
           >
             <Text style={styles.btnText} numberOfLines={1}>
               {b.label}

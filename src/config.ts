@@ -31,17 +31,17 @@ export const CHECK_BUTTONS: { label: string; key: string }[] = [
 
 export const URL_MAP: Record<string, string> = {
   nghidinh:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=ngh%E1%BB%8B&search=&search=&DocTypeIds=11&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=1000&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=ngh%E1%BB%8B&search=&search=&DocTypeIds=11&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
   thongtu:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=&search=&search=&DocTypeIds=21&DocTypeIds=22&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=1000&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=&search=&search=&DocTypeIds=21&DocTypeIds=22&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
   vanbanhopnhat:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=v%C4%83&search=v%C4%83n%20ph%C3%B2ng%20q&search=&DocTypeIds=59&OrganIds=325&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=1000&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=v%C4%83&search=v%C4%83n%20ph%C3%B2ng%20q&search=&DocTypeIds=59&OrganIds=325&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
   nghiquyet:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&DocTypeIds=13&search=h%E1%BB%99i+%C4%91%E1%BB%93ng+th%E1%BA%A9m+p&OrganIds=141&search=&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=1000&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&DocTypeIds=13&search=h%E1%BB%99i+%C4%91%E1%BB%93ng+th%E1%BA%A9m+p&OrganIds=141&search=&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
   luat:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=lu%E1%BA%ADt&search=&search=&DocTypeIds=58&DocTypeIds=10&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=1000&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=lu%E1%BA%ADt&search=&search=&DocTypeIds=58&DocTypeIds=10&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
   vksnd:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2024&DateToString=&search=c%C3%B4ng&DocTypeIds=3&search=&OrganIds=225&search=&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2024&DateToString=&search=c%C3%B4ng&DocTypeIds=3&search=&OrganIds=225&search=&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
   tandtc:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=h%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=&search=T%C3%92A%20%C3%81N%20NH%C3%82&search=&DocTypeIds=3&OrganIds=193&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PagSize=20&PageSize=20&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=h%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=&search=T%C3%92A%20%C3%81N%20NH%C3%82&search=&DocTypeIds=3&OrganIds=193&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
 };

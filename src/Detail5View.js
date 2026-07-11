@@ -22,7 +22,7 @@ sumChapterArray[0] = 0;
 let sumChapterPrevious;
 let eachSectionWithChapter = [];
 
-export default function Detail5View({ content, info, onBack, onReload, onPush, pushing, exists }) {
+export default function Detail5View({ content, info, onBack, onReload, onPush, pushing, pushed, exists, onDone }) {
   // Chuẩn hoá data về đúng dạng Content/Info như bản gốc.
   const Content = Array.isArray(content) ? content : Object.values(content || {});
   const Info = info || {};
@@ -299,7 +299,7 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
 
           <TouchableOpacity
             style={{
-              backgroundColor: exists ? "#C62828" : "#009933",
+              backgroundColor: pushed ? "#009933" : exists ? "#C62828" : "#009933",
               height: 36,
               paddingHorizontal: 16,
               minWidth: 90,
@@ -311,11 +311,11 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
               opacity: pushing ? 0.7 : 1,
             }}
             disabled={pushing}
-            onPress={onPush}
+            onPress={pushed ? onDone : onPush}
           >
             {pushing && <ActivityIndicator size="small" color="white" />}
             <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>
-              {pushing ? "Đang push..." : exists ? "Push (ghi đè)" : "Push"}
+              {pushed ? "✓ Thành công" : pushing ? "Đang push..." : exists ? "Push (ghi đè)" : "Push"}
             </Text>
           </TouchableOpacity>
 

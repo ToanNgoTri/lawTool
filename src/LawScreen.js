@@ -58,6 +58,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
   const [exists, setExists] = useState(false);
   const [busy, setBusy] = useState("scrape");
   const [error, setError] = useState("");
+  const [pushed, setPushed] = useState(false);
   const scrollRef = useRef(null);
   // Bản scrape gốc — làm ĐẦU VÀO convert cho lawDaySign/lawDescription (form giữ bản đã convert).
   const scrapedRef = useRef(EMPTY);
@@ -178,11 +179,9 @@ export default function LawScreen({ url, onBack, onPushed }) {
         return;
       }
       if (r.success) {
-        // Push xong -> xóa item này khỏi danh sách màn hình chính.
+        // Push xong -> xóa item này khỏi danh sách màn hình chính, đổi nút thành "Thành công".
         onPushed?.(url);
-        Alert.alert("Thành công", `Đã push ${r.lawNumberForPush}\n${r.chunks} chunks lên Firestore + Mongo`, [
-          { text: "OK", onPress: onBack },
-        ]);
+        setPushed(true);
       } else {
         const detail =
           `Mongo: ${r.mongoOk ? "OK" : "FAIL"} | Firestore: ${r.firestoreOk ? "OK" : "FAIL"}` +
@@ -205,9 +204,11 @@ export default function LawScreen({ url, onBack, onPushed }) {
         info={mergedInfo() || processed.lawInfo}
         exists={exists}
         pushing={busy === "push"}
+        pushed={pushed}
         onBack={() => setShowDetail(false)}
         onReload={() => runProcess(raw)}
         onPush={() => runPush(false)}
+        onDone={onBack}
       />
     );
   }

@@ -82,9 +82,11 @@ export default function LawScreen({ url, onBack, onPushed }) {
       const result = await processLaw(input);
       setProcessed(result);
       const li = result.lawInfo || {};
-      // Điền các trường ĐÃ CHUYỂN ĐỔI vào form.
+      // Điền các trường ĐÃ CHUYỂN ĐỔI vào form. content -> hiển thị bản output đã
+      // convert (partTwo) giống trang once của nextLawTool, không giữ text thô.
       setRaw((prev) => ({
         ...prev,
+        content: typeof result.output === "string" && result.output ? result.output : prev.content,
         lawDaySign: toISO(li.lawDaySign) || prev.lawDaySign,
         lawDayActive: toISO(li.lawDayActive),
         lawNameDisplay: li.lawNameDisplay || "",
@@ -104,25 +106,35 @@ export default function LawScreen({ url, onBack, onPushed }) {
     }
   }, []);
 
-  // scrape -> đổ form -> TỰ convert luôn.
-  const doScrape = useCallback(async () => {
-    setBusy("scrape");
-    setError("");
-    setProcessed(null);
-    setShowDetail(false);
-    try {
-      const scraped = { ...EMPTY, ...(await scrapeLaw(url)) };
-      scrapedRef.current = scraped;
-      setRaw(scraped);
-      await runProcess(scraped);
-    } catch (e) {
-      setError(e.message || String(e));
-      setBusy("");
-    }
-  }, [url, runProcess]);
+  // scrape -> đổ form. autoProcess=true (lần đầu vào) thì tự "Get content" luôn;
+  // false (bấm "Lấy lại") thì chỉ đổ form để user sửa rồi tự bấm "Get content".
+  const doScrape = useCallback(
+    async (autoProcess = false) => {
+      setBusy("scrape");
+      setError("");
+      setProcessed(null);
+      setPushed(false);
+      setShowDetail(false);
+      try {
+        const scraped = { ...EMPTY, ...(await scrapeLaw(url)) };
+        scrapedRef.current = scraped;
+        setRaw(scraped);
+        if (autoProcess) {
+          await runProcess(scraped);
+        } else {
+          setBusy("");
+        }
+      } catch (e) {
+        setError(e.message || String(e));
+        setBusy("");
+      }
+    },
+    [url, runProcess],
+  );
 
+  // Lần đầu vào màn: scrape + tự Get content.
   useEffect(() => {
-    doScrape();
+    doScrape(true);
   }, [doScrape]);
 
   useEffect(() => {
@@ -222,13 +234,16 @@ export default function LawScreen({ url, onBack, onPushed }) {
             <Text style={styles.back}>← Danh sách</Text>
           </TouchableOpacity>
           <View style={styles.topRight}>
-            <TouchableOpacity onPress={doScrape} disabled={busy !== ""}>
+            <TouchableOpacity onPress={() => doScrape(false)} disabled={busy !== ""}>
               <Text style={styles.reload}>↻ Lấy lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.getBtn} onPress={goToDetail} disabled={busy !== ""}>
+            <TouchableOpacity style={styles.contentBtn} onPress={() => runProcess(raw)} disabled={busy !== ""}>
               <Text style={styles.getText}>
-                {busy === "process" ? "Đang xử lý..." : "→"}
+                {busy === "process" ? "Đang xử lý..." : "Get content"}
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.getBtn} onPress={goToDetail} disabled={busy !== "" || !processed}>
+              <Text style={{...styles.getText}}>→</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -284,6 +299,7 @@ const styles = StyleSheet.create({
   back: { color: "#4CAF50", fontSize: 15 },
   reload: { color: "#FF9800", fontSize: 15 },
   getBtn: { backgroundColor: "#1565C0", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 14 },
+  contentBtn: { backgroundColor: "#2E7D32", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12 },
   getText: { color: "#fff", fontWeight: "600", fontSize: 14,padding:5 },
   url: { color: "#888", fontSize: 11, marginVertical: 6 },
   label: { color: "#aaa", fontSize: 12, marginBottom: 2 },

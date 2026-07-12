@@ -114,14 +114,24 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
     }
   }
 
-  // đưa nội dung điều (chuỗi / mảng / object) về chuỗi
+  // đưa nội dung điều (chuỗi / số / mảng / object) về chuỗi — ĐỆ QUY để không bao
+  // giờ lòi ra "[object Object]" (mảng chứa object -> raw.join sẽ ra [object Object]).
   function toPlainText(raw) {
     if (raw === undefined || raw === null) return "";
     if (typeof raw === "string") return raw;
-    if (Array.isArray(raw)) return raw.join(" ");
+    if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+    if (Array.isArray(raw)) {
+      return raw.map(toPlainText).filter(Boolean).join("\n");
+    }
     if (typeof raw === "object") {
-      const k = Object.keys(raw)[0];
-      return typeof k === "string" ? k : JSON.stringify(raw);
+      // object dạng {tiêu đề: nội dung} hoặc {"1.": "...", "2.": "..."}: ghép key + value.
+      return Object.entries(raw)
+        .map(([k, v]) => {
+          const val = toPlainText(v);
+          return val ? `${k} ${val}` : String(k);
+        })
+        .filter(Boolean)
+        .join("\n");
     }
     return String(raw);
   }
@@ -358,7 +368,7 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
                 Content.map((key, i) => {
                   return (
                     <View key={`${i}Main`}>
-                      {(Object.keys(key)[0].match(/^(phần thứ .*)|^chương .*/gim) ||
+                      {(Object.keys(key)[0].match(/^(phần\s+(thứ|[ivx]|\d).*)|^chương .*/gim) ||
                         Object.keys(key)[0].match(
                           /^(V|I|X|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z)*\./,
                         )) && (
@@ -376,7 +386,7 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
                           </Text>
                         </TouchableOpacity>
                       )}
-                      {Object.keys(key)[0].match(/^phần thứ .*/gim) ||
+                      {Object.keys(key)[0].match(/^phần\s+(thứ|[ivx]|\d).*/gim) ||
                       Object.keys(key)[0].match(/^(A|B|C|D|E|F|G|H)\./)
                         ? b(key, i, Object.keys(key)[0])
                         : Object.keys(key)[0].match(/(^chương .*|^(V|I|X)*\.)/gim)
@@ -708,7 +718,9 @@ const styles = StyleSheet.create({
     color: "black",
     lineHeight: 23,
   },
-  content: { height: 0 },
+  // Thu gọn: display:"none" ẩn HẲN khỏi layout. Trước dùng { height: 0 } nhưng RN
+  // không clip nội dung con nếu thiếu overflow:"hidden" -> bấm collapse như vô tác dụng.
+  content: { display: "none" },
   empty: { color: "#C62828", textAlign: "center", marginTop: 80 },
   functionTab: {
     position: "absolute",

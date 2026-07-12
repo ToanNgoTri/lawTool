@@ -527,8 +527,8 @@ function convertPartTwo(partOne, nameSign) {
       // console.log("b14a", b14);
 
       break;
-    } else if (clause.match(/^(Phần|PHẦN)\s(THỨ|I|l|1)/gim)) {
-      let firstSection = partOne.match(/^(Phần|PHẦN)\s(THỨ|I|l|1).*/im)[0];
+    } else if (clause.match(/^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|1)/gim)) {
+      let firstSection = partOne.match(/^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|1).*/im)[0];
 
       // lawRelatedText = b14.match(new RegExp(`(.*\\n)*(?=${firstSection})\\b`, "img"))[0]
       b14 = partOne.replace(
@@ -1004,19 +1004,19 @@ function convertContent(contentOutputText) {
   for (let c = 0; c < 5; c++) {
     if (!c) {
       i8a[c] = i7.replace(
-        /(?<=^(Phần|PHẦN)\s(THỨ|I|l|1).*)\n(?!(((Điều|Ðiều|Điều) \d.*)|(chương (V|I|X|\d).*$.*)))/gim,
+        /(?<=^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|1).*)\n(?!(((Điều|Ðiều|Điều) \d.*)|(chương (V|I|X|\d).*$.*)))/gim,
         ": ",
       );
     } else {
       i8a[c] = i8a[c - 1].replace(
-        /(?<=^(Phần|PHẦN)\s(THỨ|I|l|1).*)\n(?!(((Điều|Ðiều|Điều) \d.*)|(chương (V|I|X|\d).*$.*)))/gim,
+        /(?<=^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|1).*)\n(?!(((Điều|Ðiều|Điều) \d.*)|(chương (V|I|X|\d).*$.*)))/gim,
         " ",
       );
     }
   }
   i8 = i8a[4];
 
-  let i9 = i8.replace(/(?<=^(Phần|PHẦN)\s(THỨ|I|l|\d)+[^\.]*)\./im, ""); // bỏ dấu chấm cuối chữ phần thứ ...
+  let i9 = i8.replace(/(?<=^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|\d)+[^\.]*)\./im, ""); // bỏ dấu chấm cuối chữ phần thứ ...
 
   let i10;
   let i10a = []; // kết nối "chương với nội dung "chương ...", trường hợp bị tách 2 hàng
@@ -1152,13 +1152,13 @@ function convertContent(contentOutputText) {
       }
     }
     // setTextForMachine(data);
-  } else if (i10.match(/^(Phần|PHẦN)\s(THỨ|I|l|\d).*/i)) {
+  } else if (i10.match(/^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|\d).*/i)) {
     //////////////////////////////////////////////////////////  // nếu có phần thứ ...
 
     let sectionArray;
 
-    if (i10.match(/^(Phần|PHẦN)\s(THỨ|I|l|\d).*/gim)) {
-      sectionArray = i10.match(/^(Phần|PHẦN)\s(THỨ|I|l|\d).*/gim);
+    if (i10.match(/^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|\d).*/gim)) {
+      sectionArray = i10.match(/^(Phần|PHẦN)\s(THỨ|[IVXLC]+(?=[\s:.]|$)|\d).*/gim);
     } else {
       sectionArray = null;
     }

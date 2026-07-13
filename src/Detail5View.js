@@ -309,7 +309,7 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
 
           <TouchableOpacity
             style={{
-              backgroundColor: pushed ? "#009933" : exists ? "#C62828" : "#009933",
+              backgroundColor: pushed ? "#C62828" : exists ? "#C62828" : "#009933",
               height: 36,
               paddingHorizontal: 16,
               minWidth: 90,

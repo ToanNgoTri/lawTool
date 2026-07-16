@@ -3,6 +3,8 @@
 // - embedText() đổi sang Ollama remote.
 // - Các biến module-level bên dưới (lawInfo, roleSign...) bị convertBareTextInfo
 //   ghi đè -> hàm xử lý phải chạy với concurrency = 1 (xem index.js).
+const { normalizeLawKey } = require("./normalize");
+
 let lawInfo = {};
 let roleSign = [];
 
@@ -1676,11 +1678,11 @@ function splitIntoTextChunks(text, maxChars = 5000) {
 
 function createNameLawForPush(lawInfo) {
   const yearSign = new Date(lawInfo["lawDaySign"]).getYear() + 1900;
+  // Chuẩn hoá homoglyph (Cyrillic -> Latin) để _id lúc push khớp key ở /check.
+  const lawNumber = normalizeLawKey(lawInfo["lawNumber"]);
   return (
-    lawInfo["lawNumber"] +
-    (!lawInfo["lawNumber"].match(/(?<=\d\W)\d{4}/gim)
-      ? "(" + yearSign + ")"
-      : "")
+    lawNumber +
+    (!lawNumber.match(/(?<=\d\W)\d{4}/gim) ? "(" + yearSign + ")" : "")
   );
 }
 

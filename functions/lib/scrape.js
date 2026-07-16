@@ -3,6 +3,7 @@
 // không cần JS/đăng nhập. Xem nextLawTool/app/api/{check,url}/route.js là bản gốc.
 
 const cheerio = require("cheerio");
+const { normalizeLawKey } = require("./normalize");
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
@@ -63,7 +64,8 @@ function parseList(html) {
     const m2 = t.match(/(\d+\/\d*\/\S+\-?[^ :"';{}”)]+)(?=\b)/);
     if (m1 && year) key = `${m1[0]}(${year[0]})`;
     else if (m2) key = m2[0];
-    content[key] = href;
+    // Chuẩn hoá homoglyph (Cyrillic -> Latin) để khớp _id lúc dedup ở /check.
+    content[normalizeLawKey(key)] = href;
   });
   return content;
 }

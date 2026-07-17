@@ -91,14 +91,27 @@ function getArrangeUnitPublic(
   let unitPbDemo = [];
   // console.log('roleSignString', roleSignString);
 
+  // Chuẩn hoá khối chữ ký giống getRoleSign: gộp mọi khoảng trắng-ngang (kể cả
+  // &nbsp;) + xoá các dòng chỉ chứa khoảng trắng. Với Thông tư liên tịch, tên cơ
+  // quan (vd "BỘ CÔNG AN") nằm ngay phía trên chức vụ/tên người ký nhưng cách
+  // nhau vài dòng trống -> nếu không gộp, cửa sổ "3 dòng trên tên" toàn dòng
+  // rỗng, không chạm tới dòng cơ quan -> unitPublish ra rỗng.
+  roleSignString = String(roleSignString || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n+/g, "\n");
+
   nameSignArrayDemo.map((nameSignDemo, i) => {
     // Không tìm thấy tên người ký trong text (vd Dự thảo) -> dùng tạm nameSignDemo, không sập.
     const _nm = roleSignString.match(new RegExp(`.*${nameSignDemo}.*`, "img"));
     let nameSignString = _nm ? _nm[0] : nameSignDemo;
 
     nameSign.push(nameSignString);
+    // Cửa sổ = tối đa 3 dòng phía trên + dòng chứa tên (dùng `.*`, KHÔNG phải
+    // `\.*` = dấu chấm literal — lỗi cũ khiến vùng khớp chỉ còn đúng cái tên).
     const _ne = roleSignString.match(
-      new RegExp(`(\.*\\n){0,3}\.*${nameSignDemo}\.*`, "img"),
+      new RegExp(`(.*\\n){0,3}.*${nameSignDemo}.*`, "img"),
     );
     let nameSignStringEffectArea = _ne ? _ne[0] : nameSignDemo;
     //    let nameSignStringEffectArea = roleSignString.match(new RegExp(`${roleSignString.match(new RegExp(`(\.*\\n){0,3}\.*${nameSignDemo}\.*`,'img'))[0]  }`,'img'))[0]

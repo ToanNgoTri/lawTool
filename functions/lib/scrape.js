@@ -81,16 +81,24 @@ function parseDetail(html) {
   let body = $(".the-document-body").not(".doc-summary").first();
   if (!body.length) body = $(".the-document-body").first();
 
-  // Nội dung: docitem-1,2,5,11,12 nhưng CẮT tại docitem-9 (khối "Nơi nhận")
-  // -> mọi thứ sau docitem-9 (phụ lục) bị loại, giống :not(.docitem-9 ~ div) gốc.
-  const contentClasses = ["docitem-1", "docitem-2", "docitem-5", "docitem-11", "docitem-12"];
+  // Nội dung: lấy MỌI docitem trước docitem-9 (khối "Nơi nhận") -> mọi thứ sau
+  // docitem-9 (phụ lục) bị loại, giống :not(.docitem-9 ~ div) gốc.
+  //
+  // KHÔNG dùng allowlist cố định (docitem-1,2,5,11,12): luatvietnam.vn đánh số
+  // class docitem-N khác nhau tuỳ văn bản — thân điều luật có thể nằm ở
+  // docitem-22/24/25... nên allowlist sẽ rớt hết nội dung (chỉ còn tiêu đề Điều).
+  // Thay vào đó loại các khối metadata đã lấy ở nơi khác / không thuộc nội dung:
+  //   docitem-8  = header (cơ quan ban hành + số hiệu + quốc hiệu)
+  //   docitem-13 = tiêu đề loại văn bản (VD "THÔNG TƯ ...")
+  //   docitem-14/15 = "Căn cứ..." / "Theo đề nghị..." -> đã gộp vào lawRelated
+  const nonContentClasses = ["docitem-8", "docitem-13", "docitem-14", "docitem-15"];
   const parts = [];
   let reachedRoleSign = false;
   body.children().each((_, el) => {
     const cls = $(el).attr("class") || "";
     if (/\bdocitem-9\b/.test(cls)) reachedRoleSign = true;
     if (reachedRoleSign) return;
-    if (contentClasses.some((c) => new RegExp(`\\b${c}\\b`).test(cls))) {
+    if (!nonContentClasses.some((c) => new RegExp(`\\b${c}\\b`).test(cls))) {
       const t = innerText($, el);
       if (t) parts.push(t);
     }

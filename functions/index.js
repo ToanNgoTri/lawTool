@@ -1,47 +1,28 @@
 /**
  * Cloud Functions cho lawRNTool.
- * Thay puppeteer bằng fetch + cheerio; embed qua Ollama remote; push Mongo + Firestore.
+ * Thay puppeteer bằng fetch + cheerio; embed qua Ollama remote; push toàn bộ vào MongoDB.
  *
  * Endpoints (HTTP v2):
  *   GET  /check?url=...      -> quét trang danh sách  -> { content: {tên: href} }
  *   GET  /scrapeLaw?url=...  -> quét 1 văn bản        -> { data: {...trường thô} }
  *   POST /processLaw         -> chuẩn hoá + chuyển đổi -> { lawInfo, output, fullText, data, lawNumberForPush }
- *   POST /pushLaw            -> embed + Firestore + Mongo -> { success, lawNumberForPush, ... }
+ *   POST /pushLaw            -> embed + Mongo (metadata + ragdb.chunks) -> { success, lawNumberForPush, ... }
  */
 
 const { onRequest } = require("firebase-functions/https");
 const { setGlobalOptions } = require("firebase-functions");
 const logger = require("firebase-functions/logger");
 
-const { initializeApp, getApps, cert } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
 
 const scrape = require("./lib/scrape");
 const convert = require("./lib/convert");
 const pipeline = require("./lib/pipeline");
 
-// Chuỗi kết nối Mongo đọc từ .env (MONGODB_URI) — KHÔNG hardcode để tránh lộ trên GitHub.
-
-
-// Khởi tạo LAZY: KHÔNG gọi cert()/getFirestore() ở top-level, vì lúc Firebase CLI
-// phân tích code (deploy/discovery) .env CHƯA được nạp -> process.env rỗng -> crash.
-// Chỉ init khi handler chạy (lúc đó .env đã có). Ghi Firestore của project2-197c0.
-let _db = null;
-function getDb() {
-  if (!getApps().length) {
-    initializeApp({
-      // Dùng SA_* vì Firebase Functions cấm key .env bắt đầu bằng FIREBASE_.
-      credential: cert({
-        projectId: process.env.SA_PROJECT_ID,
-        clientEmail: process.env.SA_CLIENT_EMAIL,
-        privateKey: process.env.SA_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      }),
-    });
-  }
-  if (!_db) _db = getFirestore();
-  return _db;
-}
+// Chuỗi kết nối Mongo đọc từ .env — KHÔNG hardcode để tránh lộ trên GitHub.
+//   MONGODB_URI      -> LawMachine (metadata: LawCollection, LawSearch*)
+//   MONGODB_URI_RAG  -> ragdb (collection `chunks` + index $vectorSearch cho AI)
 
 setGlobalOptions({ region: "asia-southeast1", maxInstances: 10 });
 
@@ -53,6 +34,17 @@ function getMongo() {
   }
   return mongoClientPromise;
 }
+
+// Client riêng cho ragdb (chunks vector search) — server/cred khác MONGODB_URI.
+let ragClientPromise = null;
+function getRagMongo() {
+  if (!ragClientPromise) {
+    ragClientPromise = new MongoClient(process.env.MONGODB_URI_RAG).connect();
+  }
+  return ragClientPromise;
+}
+const RAG_DB = "ragdb";
+const RAG_CHUNKS = "chunks";
 
 // ─── ObjectLawPair: bản đồ tra "luật liên quan" ─────────────────────────────────
 // Trước đây bundle sẵn functions/lib/ObjectLawPair.json (read-only, đóng băng theo
@@ -204,7 +196,7 @@ exports.processLaw = onRequest(
 );
 
 // ─── POST /pushLaw ───────────────────────────────────────────────────────────────
-// Body: { lawInfo, data, fullText }. Embed (Ollama remote) -> Firestore + Mongo.
+// Body: { lawInfo, data, fullText }. Embed (Ollama remote) -> Mongo (metadata + ragdb.chunks).
 exports.pushLaw = onRequest(
   {
     cors: true,
@@ -247,14 +239,14 @@ exports.pushLaw = onRequest(
         return res.status(500).json({ success: false, error: "Không tạo được chunk nào để embed" });
       }
 
-      // 2) Push chunks -> Firestore (bắt lỗi riêng để lộ chính xác vì sao chunk không lên)
-      let firestoreOk = false;
-      let firestoreError = null;
+      // 2) Push chunks -> MongoDB ragdb.chunks (bắt lỗi riêng để lộ vì sao chunk không lên)
+      let chunksOk = false;
+      let chunksError = null;
       try {
-        firestoreOk = await pushLawChunk(chunks);
+        chunksOk = await pushLawChunk(chunks);
       } catch (e) {
-        firestoreError = e.message || String(e);
-        console.error("❌ pushLawChunk (Firestore) lỗi:", e);
+        chunksError = e.message || String(e);
+        console.error("❌ pushLawChunk (Mongo ragdb) lỗi:", e);
       }
 
       // 3) Push -> MongoDB (3 collection: LawCollection, LawSearchContent, LawSearchDescription).
@@ -273,11 +265,11 @@ exports.pushLaw = onRequest(
       }
 
       res.json({
-        success: firestoreOk && mongoOk,
+        success: chunksOk && mongoOk,
         lawNumberForPush,
         chunks: chunks.length,
-        firestoreOk,
-        firestoreError,
+        chunksOk,
+        chunksError,
         mongoOk,
       });
     } catch (err) {
@@ -286,45 +278,37 @@ exports.pushLaw = onRequest(
   },
 );
 
-// ─── Firestore: port pushLawChunk từ nextLawTool/app/api/embedlaw ─────────────────
+// ─── Ghi chunk (embedding) vào MongoDB ragdb.chunks ───────────────────────────
+// $vectorSearch cần `embedding` là MẢNG số thường (không phải kiểu vector đặc biệt
+// như FieldValue.vector của Firestore). Upsert theo _id để push đè an toàn — khớp
+// schema mà scripts/firestoreToMongo.mjs của nextLawTool đã dựng.
 async function pushLawChunk(lawEmbedding) {
   if (!lawEmbedding || lawEmbedding.length === 0) return false;
-  const db = getDb();
-  // Firestore emulator (bản cũ) không nhận FieldValue.vector -> lưu mảng thường khi test local.
-  const inEmulator = !!process.env.FIRESTORE_EMULATOR_HOST;
-  const colRef = db.collection("chunks");
-  const chunkSize = 500; // Firestore batch tối đa 500 op
-  for (let i = 0; i < lawEmbedding.length; i += chunkSize) {
-    const batch = db.batch();
-    for (const item of lawEmbedding.slice(i, i + chunkSize)) {
-      const docRef = item._id ? colRef.doc(String(item._id)) : colRef.doc();
+  const client = await getRagMongo();
+  const col = client.db(RAG_DB).collection(RAG_CHUNKS);
+  const batchSize = 500;
+  for (let i = 0; i < lawEmbedding.length; i += batchSize) {
+    const ops = lawEmbedding.slice(i, i + batchSize).map((item) => {
+      const _id = item._id ? String(item._id) : crypto.randomUUID();
       const { embedding, ...rest } = item;
-      let embeddingField = {};
-      if (embedding) {
-        embeddingField = { embedding: inEmulator ? embedding : FieldValue.vector(embedding) };
-      }
-      batch.set(docRef, { ...rest, ...embeddingField });
-    }
-    await batch.commit();
+      const doc = { ...rest, _id, ...(embedding ? { embedding } : {}) };
+      return { replaceOne: { filter: { _id }, replacement: doc, upsert: true } };
+    });
+    await col.bulkWrite(ops, { ordered: false });
   }
   return true;
 }
 
-// Xoá bản cũ khi ghi đè (force): 3 collection Mongo + chunks trên Firestore.
+// Xoá bản cũ khi ghi đè (force): 3 collection metadata + chunks trên ragdb.
 async function removeExisting(dbm, id) {
   await Promise.all([
     dbm.collection("LawCollection").deleteOne({ _id: id }),
     dbm.collection("LawSearchContent").deleteOne({ _id: id }),
     dbm.collection("LawSearchDescription").deleteOne({ _id: id }),
   ]);
-  // Firestore: chunks lưu field lawId = lawNumberForPush
-  const db = getDb();
-  const snap = await db.collection("chunks").where("lawId", "==", id).get();
-  for (let i = 0; i < snap.docs.length; i += 500) {
-    const batch = db.batch();
-    snap.docs.slice(i, i + 500).forEach((d) => batch.delete(d.ref));
-    await batch.commit();
-  }
+  // ragdb.chunks lưu field lawId = lawNumberForPush
+  const rag = await getRagMongo();
+  await rag.db(RAG_DB).collection(RAG_CHUNKS).deleteMany({ lawId: id });
 }
 
 // ─── Mongo: port /api/push (3 thao tác) ─────────────────────────────────────────

@@ -196,8 +196,8 @@ export default function LawScreen({ url, onBack, onPushed }) {
         setPushed(true);
       } else {
         const detail =
-          `Mongo: ${r.mongoOk ? "OK" : "FAIL"} | Firestore: ${r.firestoreOk ? "OK" : "FAIL"}` +
-          (r.firestoreError ? `\nFirestore error: ${r.firestoreError}` : "");
+          `Mongo: ${r.mongoOk ? "OK" : "FAIL"} | Chunks: ${r.chunksOk ? "OK" : "FAIL"}` +
+          (r.chunksError ? `\nChunks error: ${r.chunksError}` : "");
         throw new Error(detail);
       }
     } catch (e) {

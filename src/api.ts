@@ -87,8 +87,8 @@ export async function pushLaw(payload: {
   duplicate?: boolean;
   lawNumberForPush: string;
   chunks?: number;
-  firestoreOk?: boolean;
-  firestoreError?: string | null;
+  chunksOk?: boolean;
+  chunksError?: string | null;
   mongoOk?: boolean;
 }> {
   // Không dùng postJSON: cần giữ lại cờ duplicate (server trả success:false khi trùng).

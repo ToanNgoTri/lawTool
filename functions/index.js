@@ -179,6 +179,37 @@ exports.checkExists = onRequest(
   },
 );
 
+// ─── POST /suggestByIds ──────────────────────────────────────────────────────────
+// Tra 1 lượt tên (mô tả) cho danh sách lawId -> { map: { [lawId]: tên } }. Chỉ trả
+// các id ĐÃ CÓ trong LawSearchDescription -> Detail5View bôi ĐẬM cái đã có (thay cho
+// suggestMap local của lawMachine — lawRNTool không có cache file nên tra online).
+exports.suggestByIds = onRequest(
+  { cors: true, timeoutSeconds: 30 },
+  async (req, res) => {
+    try {
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+      if (!ids.length) return res.json({ success: true, map: {} });
+      const client = await getMongo();
+      const rows = await client
+        .db("LawMachine")
+        .collection("LawSearchDescription")
+        .find(
+          { _id: { $in: ids } },
+          { projection: { _id: 1, "info.lawDescription": 1, "info.lawNameDisplay": 1 } },
+        )
+        .toArray();
+      const map = {};
+      for (const r of rows) {
+        const info = r.info || {};
+        map[r._id] = info.lawDescription || info.lawNameDisplay || "";
+      }
+      res.json({ success: true, map });
+    } catch (err) {
+      sendErr(res, err);
+    }
+  },
+);
+
 // ─── POST /processLaw ────────────────────────────────────────────────────────────
 // concurrency:1 vì convert.js dùng biến module-level mutable (không an toàn song song).
 exports.processLaw = onRequest(

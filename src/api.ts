@@ -76,6 +76,13 @@ export async function checkExists(id: string): Promise<boolean> {
   return !!json.exists;
 }
 
+// POST /suggestByIds -> { [lawId]: tên } cho các lawId ĐÃ CÓ trong Mongo.
+// Dùng để bôi đậm "văn bản liên quan" nào đã tồn tại (thay suggestMap local).
+export async function suggestByIds(ids: string[]): Promise<Record<string, string>> {
+  const json = await postJSON("suggestByIds", { ids });
+  return (json.map || {}) as Record<string, string>;
+}
+
 // POST /pushLaw -> embed + Firestore + Mongo. force=true để ghi đè bản cũ.
 export async function pushLaw(payload: {
   lawInfo: Record<string, any>;

@@ -472,7 +472,9 @@ async function getLawRelated(text, dayActive, ObjectLawPair, lawNumber) {
   const result = Object.fromEntries(
     Object.entries(lawRelatedObject).filter(([key]) => !key.includes(" ")),
   );
-  return result;
+  // Trả về MẢNG lawId (vd ["100/2015/QH13", ...]) thay vì object { lawId: name }.
+  // Việc tra tên hiển thị + kiểm tra "còn tồn tại" giờ làm live ở app qua suggestMap.
+  return Object.keys(result);
 }
 
 function RemoveNoOrder(array) {

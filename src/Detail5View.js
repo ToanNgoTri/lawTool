@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { suggestByIds } from "./api";
 
 // Renderer mô phỏng lawMachine/screens/Detail5.js — bản CƠ BẢN:
 // hiển thị content (chương/phần/điều/khoản), thu gọn/mở, modal thông tin.
@@ -33,6 +34,26 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
 
   const insets = useSafeAreaInsets();
   const list = useRef(null);
+
+  // Bản mới: lawRelated là MẢNG lawId. Tra online (suggestByIds) xem id nào ĐÃ CÓ
+  // trong DB -> lấy tên để bôi đậm. Bản cũ (object) đã sẵn tên nên bỏ qua fetch.
+  const [relatedNameMap, setRelatedNameMap] = useState({});
+  const lawRelatedKey = JSON.stringify(Info["lawRelated"] || null);
+  useEffect(() => {
+    const lr = Info["lawRelated"];
+    if (!Array.isArray(lr) || !lr.length) {
+      setRelatedNameMap({});
+      return;
+    }
+    let alive = true;
+    suggestByIds(lr)
+      .then((m) => alive && setRelatedNameMap(m || {}))
+      .catch(() => alive && setRelatedNameMap({}));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lawRelatedKey]);
 
   const { width } = Dimensions.get("window");
   const [widthDevice, setWidthDevice] = useState(width);
@@ -614,36 +635,46 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
                       }}
                     >
                       {Info &&
-                        Object.entries(Info["lawRelated"])
-                          // value = 0 (chưa map số hiệu) hiển thị đầu tiên — chỉ đổi
-                          // thứ tự hiển thị, không ảnh hưởng dữ liệu gốc lawRelated.
-                          .sort((a, b) => {
-                            const az = a[1] === 0 || a[1] === "0" ? 0 : 1;
-                            const bz = b[1] === 0 || b[1] === "0" ? 0 : 1;
-                            return az - bz;
-                          })
-                          .map(([key, nameLaw], i) => {
-                            const isZero = nameLaw === 0 || nameLaw === "0";
-                            return (
-                              <View key={`${i}lawRelated`}>
-                                <Text
-                                  style={{
-                                    ...styles.ModalInfoContentLawRelated,
-                                    textAlign: "justify",
-                                    fontWeight: isZero ? "400" : "600",
-                                    fontStyle: "italic",
-                                    lineHeight: 22,
-                                    paddingLeft: 0,
-                                    textTransform: "none",
-                                  }}
-                                >
-                                  {isZero
-                                    ? `- ${key}`
-                                    : `- ${key}: ${String(nameLaw)}`}
-                                </Text>
-                              </View>
-                            );
-                          })}
+                        (() => {
+                          const lr = Info["lawRelated"];
+                          // Chuẩn hoá cả 2 version về { key, exists, name }:
+                          //  - MẢNG (mới): "đã có" = id nằm trong relatedNameMap (tra online).
+                          //  - object (cũ): "đã có" = value khác 0 (đã map sẵn tên).
+                          const items = Array.isArray(lr)
+                            ? lr.map((key) => ({
+                                key,
+                                exists: Object.prototype.hasOwnProperty.call(
+                                  relatedNameMap,
+                                  key,
+                                ),
+                                name: relatedNameMap[key] || "",
+                              }))
+                            : Object.entries(lr || {}).map(([key, val]) => ({
+                                key,
+                                exists: !(val === 0 || val === "0"),
+                                name: val === 0 || val === "0" ? "" : String(val),
+                              }));
+                          // Chưa có (thường) hiển thị trước, đã có (in đậm) xuống dưới —
+                          // giữ thứ tự như bản cũ (value 0 lên đầu).
+                          items.sort((a, b) => Number(a.exists) - Number(b.exists));
+                          return items.map(({ key, exists, name }, i) => (
+                            <View key={`${i}lawRelated`}>
+                              <Text
+                                style={{
+                                  ...styles.ModalInfoContentLawRelated,
+                                  textAlign: "justify",
+                                  fontWeight: exists ? "600" : "400",
+                                  fontStyle: "italic",
+                                  lineHeight: 22,
+                                  paddingLeft: 0,
+                                  textTransform: "none",
+                                }}
+                              >
+                                {exists && name ? `- ${key}: ${name}` : `- ${key}`}
+                              </Text>
+                            </View>
+                          ));
+                        })()}
                     </View>
                   </View>
                 )}

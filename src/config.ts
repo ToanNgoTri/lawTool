@@ -18,6 +18,9 @@ export const FUNCTIONS_BASE_URL =
 //   "http://192.168.80.11:5001/lawtool-f8b15/asia-southeast1";
 
 // Các URL preset (bê nguyên từ nextLawTool/app/check/page.js).
+// ⚠️ Không thêm lại `OrganIds=0` / `FieldIds=0` / `SignerIds=0`: từ bản
+//    luatvietnam.vn 09/2026, `=0` bị coi là id thật thay vì "tất cả" nên trang
+//    trả về "Có 0 văn bản". scrape.js cũng tự lọc bỏ (xem sanitizeListUrl).
 export const CHECK_BUTTONS: { label: string; key: string }[] = [
   { label: "Check URL nhập tay", key: "manual" },
   { label: "Nghị Định", key: "nghidinh" },
@@ -33,21 +36,21 @@ export const CHECK_BUTTONS: { label: string; key: string }[] = [
 
 export const URL_MAP: Record<string, string> = {
   nghidinh:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=ngh%E1%BB%8B&search=&search=&DocTypeIds=11&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=ngh%E1%BB%8B&search=&search=&DocTypeIds=11&LanguageId=0&PageSize=100&PageIndex=1",
   thongtu:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=&search=&search=&DocTypeIds=21&DocTypeIds=22&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&search=&search=&DocTypeIds=21&DocTypeIds=22&LanguageId=0&PageSize=100&PageIndex=1",
   vanbanhopnhat:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=v%C4%83&search=v%C4%83n%20ph%C3%B2ng%20q&search=&DocTypeIds=59&OrganIds=325&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=v%C4%83&search=v%C4%83n+ph%C3%B2ng+q&search=&DocTypeIds=59&OrganIds=325&LanguageId=0&PageSize=100&PageIndex=1",
   nghiquyet:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&DocTypeIds=13&search=h%E1%BB%99i+%C4%91%E1%BB%93ng+th%E1%BA%A9m+p&OrganIds=141&search=&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&DocTypeIds=13&search=h%E1%BB%99i+%C4%91%E1%BB%93ng+th%E1%BA%A9m+p&OrganIds=141&search=&LanguageId=0&PageSize=100&PageIndex=1",
   luat:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=lu%E1%BA%ADt&search=&search=&DocTypeIds=58&DocTypeIds=10&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=lu%E1%BA%ADt&search=&search=&DocTypeIds=58&DocTypeIds=10&LanguageId=0&PageSize=100&PageIndex=1",
   vksnd:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2024&DateToString=&search=c%C3%B4ng&DocTypeIds=3&search=&OrganIds=225&search=&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2024&DateToString=&search=c%C3%B4ng&DocTypeIds=3&search=&OrganIds=225&search=&LanguageId=0&PageSize=100&PageIndex=1",
   tandtc:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=h%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn&SearchOptions=1&SearchByDate=issueDate&DateFromString=01/01/2025&DateToString=&search=&search=T%C3%92A%20%C3%81N%20NH%C3%82&search=&DocTypeIds=3&OrganIds=193&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=h%C6%B0%E1%BB%9Bng+d%E1%BA%ABn&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&search=T%C3%92A+%C3%81N+NH%C3%82&search=&DocTypeIds=3&OrganIds=193&LanguageId=0&PageSize=100&PageIndex=1",
   phaplenh:
-    "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=14&OrganIds=0&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&RowAmount=100&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=14&LanguageId=0&RowAmount=100&PageSize=100&PageIndex=1",
   bca:
-    "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=17&DocTypeIds=4&DocTypeIds=3&DocTypeIds=20&DocTypeIds=16&DocTypeIds=5&DocTypeIds=1&DocTypeIds=28&DocTypeIds=34&DocTypeIds=35&DocTypeIds=52&DocTypeIds=92&OrganIds=41&FieldIds=0&LanguageId=0&SignerIds=0&SignerIds=0&RowAmount=100&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=17&DocTypeIds=4&DocTypeIds=3&DocTypeIds=20&DocTypeIds=16&DocTypeIds=5&DocTypeIds=1&DocTypeIds=28&DocTypeIds=34&DocTypeIds=35&DocTypeIds=52&DocTypeIds=92&OrganIds=41&LanguageId=0&RowAmount=100&PageSize=100&PageIndex=1",
 };

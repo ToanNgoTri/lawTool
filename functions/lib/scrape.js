@@ -164,12 +164,50 @@ function parseDetail(html) {
   };
 }
 
+// luatvietnam.vn (bản 09/2026) đổi cách hiểu các tham số lọc dạng id: trước đây
+// `OrganIds=0` / `FieldIds=0` / `SignerIds=0` nghĩa là "tất cả", nay bị coi là id
+// thật -> không khớp gì -> trang trả "Có 0 văn bản". URL do chính trang sinh ra
+// (và các preset cũ) vẫn kèm `=0`, nên phải bỏ đi trước khi fetch.
+const ID_FILTER_PARAMS = [
+  "OrganIds",
+  "FieldIds",
+  "SignerIds",
+  "DocTypeIds",
+  "DocGroupIds",
+  "EffectStatusIds",
+];
+
+function sanitizeListUrl(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return url; // không phải URL hợp lệ -> để fetchHtml báo lỗi như cũ
+  }
+  const p = u.searchParams;
+  for (const key of ID_FILTER_PARAMS) {
+    if (!p.has(key)) continue;
+    const kept = p.getAll(key).filter((v) => v !== "0");
+    p.delete(key);
+    for (const v of kept) p.append(key, v);
+  }
+  u.search = p.toString();
+  return u.toString();
+}
+
 async function scrapeList(url) {
-  return parseList(await fetchHtml(url));
+  return parseList(await fetchHtml(sanitizeListUrl(url)));
 }
 
 async function scrapeDetail(url) {
   return parseDetail(await fetchHtml(url));
 }
 
-module.exports = { scrapeList, scrapeDetail, parseList, parseDetail, fetchHtml };
+module.exports = {
+  scrapeList,
+  scrapeDetail,
+  parseList,
+  parseDetail,
+  fetchHtml,
+  sanitizeListUrl,
+};

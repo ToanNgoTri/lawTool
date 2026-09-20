@@ -168,6 +168,11 @@ function parseDetail(html) {
 // `OrganIds=0` / `FieldIds=0` / `SignerIds=0` nghĩa là "tất cả", nay bị coi là id
 // thật -> không khớp gì -> trang trả "Có 0 văn bản". URL do chính trang sinh ra
 // (và các preset cũ) vẫn kèm `=0`, nên phải bỏ đi trước khi fetch.
+//
+// Ngoài ra, khi lọc NHIỀU giá trị cho cùng 1 tham số, trang chỉ đọc giá trị ĐẦU
+// TIÊN nếu tham số bị lặp (`DocTypeIds=58&DocTypeIds=10` -> chỉ ra Bộ luật);
+// muốn cộng dồn phải gộp bằng dấu phẩy (`DocTypeIds=58,10`). Chính form của
+// luatvietnam.vn lại sinh ra dạng lặp, nên phải gộp lại trước khi fetch.
 const ID_FILTER_PARAMS = [
   "OrganIds",
   "FieldIds",
@@ -187,9 +192,13 @@ function sanitizeListUrl(url) {
   const p = u.searchParams;
   for (const key of ID_FILTER_PARAMS) {
     if (!p.has(key)) continue;
-    const kept = p.getAll(key).filter((v) => v !== "0");
+    const kept = p
+      .getAll(key)
+      .flatMap((v) => v.split(","))
+      .map((v) => v.trim())
+      .filter((v) => v && v !== "0");
     p.delete(key);
-    for (const v of kept) p.append(key, v);
+    if (kept.length) p.set(key, kept.join(","));
   }
   u.search = p.toString();
   return u.toString();

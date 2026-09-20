@@ -21,6 +21,9 @@ export const FUNCTIONS_BASE_URL =
 // ⚠️ Không thêm lại `OrganIds=0` / `FieldIds=0` / `SignerIds=0`: từ bản
 //    luatvietnam.vn 09/2026, `=0` bị coi là id thật thay vì "tất cả" nên trang
 //    trả về "Có 0 văn bản". scrape.js cũng tự lọc bỏ (xem sanitizeListUrl).
+// ⚠️ Lọc nhiều loại văn bản phải gộp bằng dấu phẩy (`DocTypeIds=58,10`, đã
+//    encode thành %2C): nếu lặp tham số (`DocTypeIds=58&DocTypeIds=10`) trang
+//    chỉ đọc giá trị đầu tiên -> "Luật" chỉ ra Bộ luật và rỗng sau khi lọc Dự thảo.
 export const CHECK_BUTTONS: { label: string; key: string }[] = [
   { label: "Check URL nhập tay", key: "manual" },
   { label: "Nghị Định", key: "nghidinh" },
@@ -38,13 +41,13 @@ export const URL_MAP: Record<string, string> = {
   nghidinh:
     "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=ngh%E1%BB%8B&search=&search=&DocTypeIds=11&LanguageId=0&PageSize=100&PageIndex=1",
   thongtu:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&search=&search=&DocTypeIds=21&DocTypeIds=22&LanguageId=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&search=&search=&DocTypeIds=21%2C22&LanguageId=0&PageSize=100&PageIndex=1",
   vanbanhopnhat:
     "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=v%C4%83&search=v%C4%83n+ph%C3%B2ng+q&search=&DocTypeIds=59&OrganIds=325&LanguageId=0&PageSize=100&PageIndex=1",
   nghiquyet:
     "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=&DocTypeIds=13&search=h%E1%BB%99i+%C4%91%E1%BB%93ng+th%E1%BA%A9m+p&OrganIds=141&search=&LanguageId=0&PageSize=100&PageIndex=1",
   luat:
-    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=lu%E1%BA%ADt&search=&search=&DocTypeIds=58&DocTypeIds=10&LanguageId=0&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2025&DateToString=&search=lu%E1%BA%ADt&search=&search=&DocTypeIds=58%2C10&LanguageId=0&PageSize=100&PageIndex=1",
   vksnd:
     "https://luatvietnam.vn/van-ban/tim-van-ban.html?keywords=&SearchOptions=1&SearchByDate=issueDate&DateFromString=01%2F01%2F2024&DateToString=&search=c%C3%B4ng&DocTypeIds=3&search=&OrganIds=225&search=&LanguageId=0&PageSize=100&PageIndex=1",
   tandtc:
@@ -52,5 +55,5 @@ export const URL_MAP: Record<string, string> = {
   phaplenh:
     "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=14&LanguageId=0&RowAmount=100&PageSize=100&PageIndex=1",
   bca:
-    "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=17&DocTypeIds=4&DocTypeIds=3&DocTypeIds=20&DocTypeIds=16&DocTypeIds=5&DocTypeIds=1&DocTypeIds=28&DocTypeIds=34&DocTypeIds=35&DocTypeIds=52&DocTypeIds=92&OrganIds=41&LanguageId=0&RowAmount=100&PageSize=100&PageIndex=1",
+    "https://luatvietnam.vn/van-ban/tim-kiem.html?SearchKeyword=&SearchOptions=1&SearchByDate=issue&DateFromString=&DateToString=&search=&search=&search=&DocTypeIds=17%2C4%2C3%2C20%2C16%2C5%2C1%2C28%2C34%2C35%2C52%2C92&OrganIds=41&LanguageId=0&RowAmount=100&PageSize=100&PageIndex=1",
 };

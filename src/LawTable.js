@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import {
+  Pressable,
   StyleSheet,
+  Text,
   View,
   ScrollView,
   useWindowDimensions,
@@ -10,14 +12,17 @@ import { buildTableGrid } from "./lawTables";
 const MIN_COL = 44; // px tối thiểu mỗi cột
 const MIN_COL_FOR_BASE = 80; // bảng nhiều cột thì cho rộng hơn màn hình + cuộn ngang
 const SIDE_PADDING = 10; // khớp paddingLeft/Right của styles.lines (Detail5View)
+const PAGE_ROWS = 100; // bảng dài (vd danh mục ~1000 hàng): vẽ dần từng trang
 
 // Vẽ 1 bảng của văn bản (rowspan/colspan, in đậm, căn lề) có cuộn ngang.
 // - table: { w, rows } từ field `tables` của document; thiếu -> hiện `lines` như text cũ.
 // - renderText(text, style): vẽ chữ (Detail5View truyền vào);
 //   style luôn là object phẳng.
 // - fontSize: cỡ chữ nội dung đang chọn (chữ trong ô nhỏ hơn 1).
-export function LawTable({ table, lines, renderText, fontSize = 14 }) {
+// - showAll: vẽ hết mọi hàng (khi đang tìm kiếm, để đếm/tô sáng đủ kết quả).
+export function LawTable({ table, lines, renderText, fontSize = 14, showAll = false }) {
   const { width } = useWindowDimensions();
+  const [limit, setLimit] = useState(PAGE_ROWS);
 
   if (!table || !Array.isArray(table.rows) || !table.rows.length) {
     return (
@@ -56,9 +61,12 @@ export function LawTable({ table, lines, renderText, fontSize = 14 }) {
   const colWidths = weights.map(x => Math.max(MIN_COL, (x / sumW) * base));
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
+  const visible = showAll ? grid : grid.slice(0, limit);
+  const remaining = grid.length - visible.length;
+
   const tableView = (
     <View style={[styles.table, { width: tableWidth }]}>
-      {grid.map((row, r) => {
+      {visible.map((row, r) => {
         const cells = [];
         for (let c = 0; c < nCols; ) {
           const entry = row[c];
@@ -84,8 +92,9 @@ export function LawTable({ table, lines, renderText, fontSize = 14 }) {
               style={[
                 styles.cell,
                 { width: w },
-                // ô gộp dọc: chỉ kẻ đáy ở hàng cuối cùng của ô
-                !entry.isLastRow && styles.noBottom,
+                // ô gộp dọc: chỉ kẻ đáy ở hàng cuối cùng của ô (hoặc hàng
+                // cuối đang hiện khi bảng còn hàng chưa vẽ)
+                !entry.isLastRow && r !== visible.length - 1 && styles.noBottom,
               ]}
             >
               {entry.isOrigin && cell.t
@@ -116,19 +125,41 @@ export function LawTable({ table, lines, renderText, fontSize = 14 }) {
     </View>
   );
 
-  if (tableWidth <= available + 0.5) {
-    return <View style={styles.wrap}>{tableView}</View>;
-  }
+  const body =
+    tableWidth <= available + 0.5 ? (
+      <View style={styles.wrap}>{tableView}</View>
+    ) : (
+      <ScrollView
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator
+        style={styles.wrap}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {tableView}
+      </ScrollView>
+    );
+  if (remaining <= 0) return body;
   return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator
-      style={styles.wrap}
-      contentContainerStyle={styles.scrollContent}
-    >
-      {tableView}
-    </ScrollView>
+    <View>
+      {body}
+      <View style={styles.moreRow}>
+        <Pressable
+          style={styles.moreBtn}
+          onPress={() => setLimit(l => l + PAGE_ROWS)}
+        >
+          <Text style={styles.moreText}>
+            Xem thêm {Math.min(PAGE_ROWS, remaining)} hàng (còn {remaining})
+          </Text>
+        </Pressable>
+        <Pressable
+          style={styles.moreBtn}
+          onPress={() => setLimit(grid.length)}
+        >
+          <Text style={styles.moreText}>Xem hết</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -171,6 +202,22 @@ const styles = StyleSheet.create({
   },
   right: {
     textAlign: "right",
+  },
+  moreRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  moreBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 4,
+    borderRadius: 6,
+    backgroundColor: "#EEEEEE",
+  },
+  moreText: {
+    fontSize: 13,
+    color: "#333",
   },
   fallbackLine: {
     color: "black",

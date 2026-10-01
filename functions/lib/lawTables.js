@@ -19,10 +19,11 @@ const TABLE_ID_MARK = "\u2064";
 // không neo ^ vì content có thể là JSON.stringify (xuống dòng thành "\n")
 const TABLE_PREFIX_RE = /\u2063(\u2064*)\u2063/g;
 
-// Bỏ tiền tố vô hình (dùng cho fullText tìm kiếm, embed RAG…).
+// Bỏ ký tự đánh dấu vô hình (dùng cho fullText tìm kiếm, embed RAG…): tiền tố
+// bảng U+2063/U+2064 và đánh dấu phụ lục U+2062 (lib/lawAppendix.js).
 function stripTableMarks(text) {
   if (typeof text !== "string") return text;
-  return text.replace(/[\u2063\u2064]/g, "");
+  return text.replace(/[\u2062\u2063\u2064]/g, "");
 }
 
 // Chỉ giữ các bảng còn được tham chiếu trong nội dung cuối cùng

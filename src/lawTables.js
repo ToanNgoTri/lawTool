@@ -9,7 +9,7 @@
 const LINE_PREFIX_RE = /^\u2063(\u2064*)\u2063/;
 
 export function stripTableMarks(text) {
-  return typeof text === "string" ? text.replace(/[\u2063\u2064]/g, "") : text;
+  return typeof text === "string" ? text.replace(/[\u2062\u2063\u2064]/g, "") : text;
 }
 
 export function hasTableMarks(text) {

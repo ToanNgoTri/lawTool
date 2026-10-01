@@ -68,6 +68,17 @@ export default function LawScreen({ url, onBack, onPushed }) {
     if (!DISPLAY_KEYS.has(k)) setProcessed(null); // sửa trường ĐẦU VÀO -> phải xử lý lại
   };
 
+  // Phụ lục / quy chế (raw.appendix: [{ title, text }]) là ĐẦU VÀO của processLaw
+  // -> sửa / xoá / thêm đều phải xử lý lại.
+  const setAppendix = (updater) => {
+    setRaw((prev) => ({ ...prev, appendix: updater(prev.appendix || []) }));
+    setProcessed(null);
+  };
+  const updateAppendix = (i, patch) =>
+    setAppendix((list) => list.map((a, k) => (k === i ? { ...a, ...patch } : a)));
+  const removeAppendix = (i) => setAppendix((list) => list.filter((_, k) => k !== i));
+  const addAppendix = () => setAppendix((list) => [...list, { title: "Phụ lục", text: "" }]);
+
   // Convert: đầu vào = trường hiện tại + lawDaySign/lawDescription lấy từ BẢN GỐC.
   const runProcess = useCallback(async (formRaw) => {
     setBusy("process");
@@ -269,6 +280,38 @@ export default function LawScreen({ url, onBack, onPushed }) {
           </View>
         ))}
 
+        <Text style={[styles.label, { marginTop: 8 }]}>
+          Phụ lục / quy chế ({(raw.appendix || []).length}) — nối vào cuối content
+        </Text>
+        {(raw.appendix || []).map((a, i) => (
+          <View key={`ap${i}`} style={styles.appendixBox}>
+            <View style={styles.appendixHead}>
+              <Text style={styles.label}>Tên phụ lục {i + 1}</Text>
+              <TouchableOpacity onPress={() => removeAppendix(i)}>
+                <Text style={styles.appendixRemove}>Xóa</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              value={a.title}
+              onChangeText={(v) => updateAppendix(i, { title: v })}
+              multiline
+              placeholderTextColor="#666"
+            />
+            <Text style={[styles.label, { marginTop: 6 }]}>Nội dung</Text>
+            <TextInput
+              style={[styles.input, styles.inputBig]}
+              value={a.text}
+              onChangeText={(v) => updateAppendix(i, { text: v })}
+              multiline
+              placeholderTextColor="#666"
+            />
+          </View>
+        ))}
+        <TouchableOpacity style={styles.appendixAdd} onPress={addAppendix} disabled={busy !== ""}>
+          <Text style={styles.appendixAddText}>+ Thêm phụ lục</Text>
+        </TouchableOpacity>
+
         {!processed && !busy && (
           <Text style={styles.hint}>Sửa trường đầu vào xong bấm "Detail5 →" để chuyển đổi lại & xem.</Text>
         )}
@@ -315,6 +358,24 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   inputBig: { minHeight: 90, textAlignVertical: "top" },
+  appendixBox: {
+    borderLeftWidth: 3,
+    borderLeftColor: "#26A69A",
+    paddingLeft: 8,
+    marginBottom: 10,
+  },
+  appendixHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  appendixRemove: { color: "#ff6b6b", fontSize: 13, paddingHorizontal: 6 },
+  appendixAdd: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#26A69A",
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  appendixAddText: { color: "#26A69A", fontSize: 13 },
   hint: { color: "#888", fontSize: 12, marginTop: 10, textAlign: "center" },
   error: { color: "#ff6b6b", marginVertical: 6 },
   fabColumn: {

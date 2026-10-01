@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { suggestByIds } from "./api";
 import { LawTable } from "./LawTable";
 import { hasTableMarks, indexTables, splitTableSegments } from "./lawTables";
+import { isAppendixKey, parseAppendixTitle } from "./lawAppendix";
 
 // Renderer mô phỏng lawMachine/screens/Detail5.js — bản CƠ BẢN:
 // hiển thị content (chương/phần/điều/khoản), thu gọn/mở, modal thông tin.
@@ -116,6 +117,18 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
 
   TopUnitCount = Content && Content.length;
 
+  // Văn bản chính có Chương/Phần (cùng regex với vòng vẽ Content.map) -> phụ lục
+  // thu gọn được như Chương; chỉ có Điều -> phụ lục luôn mở (renderAppendix).
+  const chapterMode = Content.some((item) => {
+    const k = item && Object.keys(item)[0];
+    return (
+      typeof k === "string" &&
+      !isAppendixKey(k) &&
+      (/^(phần\s+(thứ|[ivx]|\d).*)|^chương .*/im.test(k) ||
+        /^(V|I|X|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z)*\./.test(k))
+    );
+  });
+
   function Shrink() {
     for (let b = 0; b <= TopUnitCount - 1; b++) {
       if (tittleArray == []) {
@@ -216,6 +229,60 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
               />
             ),
           )}
+        </View>
+      );
+    });
+  }
+
+  // ─── Phụ lục / văn bản kèm theo (lawAppendix.js) — giống lawMachine Detail5 ───
+  //  - Văn bản chính có Chương/Phần: tiêu đề phụ lục thu gọn được như Chương.
+  //  - Văn bản chính chỉ có Điều: tiêu đề không nhấn được, luôn mở.
+  //  - Chương bên trong phụ lục: nhãn tĩnh, không thu gọn.
+  // KHÔNG đổi onlyArticle ở đây (nếu không nút thu gọn sẽ hiện ở văn bản chỉ có Điều).
+  function renderAppendix(key, i, collapsible) {
+    const rawTitle = Object.keys(key)[0];
+    const { badge, name, sub } = parseAppendixTitle(rawTitle);
+    const open = !collapsible || !tittleArray.includes(i);
+    const header = (
+      <View style={styles.appendixHeader}>
+        <Text style={styles.appendixBadge}>{badge}</Text>
+        {name ? <Text style={styles.appendixName}>{name.toUpperCase()}</Text> : null}
+        {sub ? <Text style={styles.appendixSub}>{sub}</Text> : null}
+      </View>
+    );
+    return (
+      <>
+        {collapsible ? <TouchableOpacity onPress={() => collapse(i)}>{header}</TouchableOpacity> : header}
+        <View style={[styles.appendixBody, !open && styles.content]}>{renderAppendixItems(key[rawTitle])}</View>
+      </>
+    );
+  }
+
+  function renderAppendixItems(items) {
+    if (!Array.isArray(items)) return renderClauses(getClauses(items));
+    return items.map((item, j) => {
+      if (!item || typeof item !== "object") return null;
+      const title = Object.keys(item)[0];
+      const value = item[title];
+      if (Array.isArray(value)) {
+        // Chương / Mục… trong phụ lục: nhãn tĩnh, không thu gọn
+        return (
+          <View key={`ap${j}`}>
+            <Text selectable={true} style={styles.appendixChapter}>
+              {String(title).toUpperCase()}
+            </Text>
+            {renderAppendixItems(value)}
+          </View>
+        );
+      }
+      return (
+        <View key={`ap${j}`} style={{ paddingVertical: 4 }}>
+          {String(title).trim() === "" ? null : (
+            <Text selectable={true} style={styles.dieu}>
+              {title}
+            </Text>
+          )}
+          {renderClauses(getClauses(value))}
         </View>
       );
     });
@@ -420,6 +487,9 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
               </Text>
               {Content &&
                 Content.map((key, i) => {
+                  if (isAppendixKey(Object.keys(key)[0])) {
+                    return <View key={`${i}Main`}>{renderAppendix(key, i, chapterMode)}</View>;
+                  }
                   return (
                     <View key={`${i}Main`}>
                       {(Object.keys(key)[0].match(/^(phần\s+(thứ|[ivx]|\d).*)|^chương .*/gim) ||
@@ -785,6 +855,38 @@ const styles = StyleSheet.create({
   // Thu gọn: display:"none" ẩn HẲN khỏi layout. Trước dùng { height: 0 } nhưng RN
   // không clip nội dung con nếu thiếu overflow:"hidden" -> bấm collapse như vô tác dụng.
   content: { display: "none" },
+  // phụ lục / văn bản kèm theo: tông xanh ngọc để khác hẳn Chương (vàng cam)
+  appendixHeader: {
+    backgroundColor: "#26A69A",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginTop: 12,
+    marginBottom: 1,
+  },
+  appendixBadge: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#26A69A",
+    backgroundColor: "white",
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: "hidden",
+    letterSpacing: 1,
+  },
+  appendixName: { color: "white", fontWeight: "bold", fontSize: 16, textAlign: "center", marginTop: 4 },
+  appendixSub: { color: "#E0F2F1", fontStyle: "italic", fontSize: 12, textAlign: "center", marginTop: 2 },
+  appendixBody: { borderLeftWidth: 3, borderLeftColor: "#26A69A" },
+  appendixChapter: {
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#00695C",
+    backgroundColor: "#E0F2F1",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 8,
+  },
   empty: { color: "#C62828", textAlign: "center", marginTop: 80 },
   functionTab: {
     position: "absolute",

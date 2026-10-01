@@ -3,6 +3,7 @@
 
 const convert = require("./convert");
 const { pruneTables } = require("./lawTables");
+const { APPENDIX_MARK, parseAppendixBody } = require("./lawAppendix");
 // ObjectLawPair KHÔNG còn bundle sẵn từ JSON. Bản đồ tra "luật liên quan" giờ
 // dựng từ Mongo (LawMachine.LawSearchDescription) để web + RN dùng chung, luôn
 // cập nhật. index.js nạp/cache map rồi truyền vào processLaw().
@@ -60,6 +61,26 @@ function prepFields(raw) {
   return { unitPublish, lawDaySign, nameSign, lawDescription, lawNumber, lawKind, lawNameDisplay, contentText };
 }
 
+// Phụ lục (port nextLawTool main.js convertAppendix): mỗi phụ lục thành 1 mục cấp
+// cao { APPENDIX_MARK + tên: [...] }, kèm text để nối vào fullText tìm kiếm.
+function convertAppendix(appendix) {
+  const items = [];
+  const texts = [];
+  for (const a of Array.isArray(appendix) ? appendix : []) {
+    if (!a || !a.text) continue;
+    const text = convert.convertPartOne(a.text);
+    if (!text) continue;
+    // KHÔNG dùng convertContent: Phần/Chương không có Điều (chỉ có mục "1.",
+    // "1.1.") làm nó lỗi RemoveNoOrder. parseAppendixBody tách Phần > Chương >
+    // Mục > Điều, đoạn còn lại thành mục " " (xem lib/lawAppendix.js).
+    let data = parseAppendixBody(text);
+    if (!Array.isArray(data) || !data.length) data = [{ " ": text }];
+    items.push({ [APPENDIX_MARK + a.title]: data });
+    texts.push(`${a.title}\n${text}`);
+  }
+  return { items, text: texts.join("\n") };
+}
+
 // Port getInfo() + clickToConvertContent(): trả về mọi thứ cần để review + push.
 // objectLawPair: bản đồ tra luật liên quan, do index.js nạp từ Mongo và truyền vào.
 async function processLaw(raw, objectLawPair) {
@@ -96,6 +117,13 @@ async function processLaw(raw, objectLawPair) {
     ? convert.convertContentOfficialDispatch(output)
     : convert.convertContent(output);
 
+  // Phụ lục / văn bản kèm theo (lib/lawAppendix.js) -> nối vào CUỐI content.
+  const extra = Array.isArray(converted.data)
+    ? convertAppendix(raw.appendix)
+    : { items: [], text: "" };
+  const data = extra.items.length ? [...converted.data, ...extra.items] : converted.data;
+  const fullText = extra.text ? `${converted.fullText}\n${extra.text}` : converted.fullText;
+
   const lawNumberForPush = convert.createNameLawForPush(lawInfo);
 
   const lawInfoPush = lawInfo;
@@ -113,11 +141,11 @@ async function processLaw(raw, objectLawPair) {
   return {
     lawInfo,
     output,
-    fullText: converted.fullText,
-    data: converted.data,
+    fullText,
+    data,
     lawNumberForPush,
     // chỉ các bảng còn nằm trong nội dung cuối cùng (xem lib/lawTables.js)
-    tables: pruneTables(raw.tables, converted.data),
+    tables: pruneTables(raw.tables, data),
   };
 }
 

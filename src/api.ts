@@ -16,6 +16,9 @@ export type RawLaw = {
   // Bảng trong nội dung (functions/lib/lawTables.js): content có các dòng mang
   // tiền tố vô hình trỏ tới bảng theo id.
   tables?: LawTableData[];
+  // Phụ lục / văn bản kèm theo sau chữ ký, đã bỏ biểu mẫu (functions/lib/lawAppendix.js).
+  // processLaw nối chúng vào cuối data (khóa bắt đầu bằng U+2062).
+  appendix?: { title: string; text: string }[];
 };
 
 export type LawTableCell = { t: string; cs?: number; rs?: number; b?: number; a?: string };

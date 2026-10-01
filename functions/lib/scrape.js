@@ -5,6 +5,7 @@
 const cheerio = require("cheerio");
 const { normalizeLawKey } = require("./normalize");
 const { extractContentTables } = require("./lawTables");
+const { planAppendixBlocks, readAppendix } = require("./lawAppendix");
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
@@ -82,9 +83,14 @@ function parseDetail(html) {
   let body = $(".the-document-body").not(".doc-summary").first();
   if (!body.length) body = $(".the-document-body").first();
 
+  // Phụ lục sau chữ ký (lib/lawAppendix.js): chia khối + XOÁ biểu mẫu khỏi DOM —
+  // phải TRƯỚC khi tách bảng để bảng của biểu mẫu không bị lấy.
+  const appendixSections = planAppendixBlocks($, body, innerText);
+
   // Bảng trong nội dung: thay bằng các dòng text có tiền tố + lấy cấu trúc riêng
   // (xem lib/lawTables.js). Phải chạy TRƯỚC khi đọc innerText bên dưới.
   const tables = extractContentTables($, body, innerText);
+  const appendix = readAppendix($, appendixSections, innerText);
 
   // Nội dung: lấy MỌI docitem trước docitem-9 (khối "Nơi nhận") -> mọi thứ sau
   // docitem-9 (phụ lục) bị loại, giống :not(.docitem-9 ~ div) gốc.
@@ -167,6 +173,7 @@ function parseDetail(html) {
     lawRelated,
     roleSign,
     tables,
+    appendix,
   };
 }
 

@@ -13,7 +13,13 @@ export type RawLaw = {
   lawDescription: string;
   lawRelated: string;
   roleSign: string;
+  // Bảng trong nội dung (functions/lib/lawTables.js): content có các dòng mang
+  // tiền tố vô hình trỏ tới bảng theo id.
+  tables?: LawTableData[];
 };
+
+export type LawTableCell = { t: string; cs?: number; rs?: number; b?: number; a?: string };
+export type LawTableData = { id: number; w: number[]; rows: LawTableCell[][] };
 
 export type ProcessResult = {
   lawInfo: Record<string, any>;
@@ -21,6 +27,7 @@ export type ProcessResult = {
   fullText: string;
   data: any;
   lawNumberForPush: string;
+  tables: LawTableData[]; // chỉ các bảng còn nằm trong data
 };
 
 async function getJSON(path: string): Promise<any> {
@@ -88,6 +95,7 @@ export async function pushLaw(payload: {
   lawInfo: Record<string, any>;
   data: any;
   fullText: string;
+  tables?: LawTableData[];
   force?: boolean;
 }): Promise<{
   success: boolean;

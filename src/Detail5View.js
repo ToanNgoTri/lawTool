@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { suggestByIds } from "./api";
+import { LawTable } from "./LawTable";
+import { hasTableMarks, indexTables, splitTableSegments } from "./lawTables";
 
 // Renderer mô phỏng lawMachine/screens/Detail5.js — bản CƠ BẢN:
 // hiển thị content (chương/phần/điều/khoản), thu gọn/mở, modal thông tin.
@@ -23,10 +25,12 @@ sumChapterArray[0] = 0;
 let sumChapterPrevious;
 let eachSectionWithChapter = [];
 
-export default function Detail5View({ content, info, onBack, onReload, onPush, pushing, pushed, exists, onDone }) {
+export default function Detail5View({ content, info, tables, onBack, onReload, onPush, pushing, pushed, exists, onDone }) {
   // Chuẩn hoá data về đúng dạng Content/Info như bản gốc.
   const Content = Array.isArray(content) ? content : Object.values(content || {});
   const Info = info || {};
+  // { id: bảng } — bảng trong nội dung (xem lawTables.js); thiếu -> hiện như text
+  const Tables = indexTables(tables);
 
   const [tittleArray, setTittleArray] = useState([]); // section cao nhất (phần thứ / chương)
   const [tittleArray2, setTittleArray2] = useState([]); // chương khi có 'phần thứ...'
@@ -181,11 +185,40 @@ export default function Detail5View({ content, info, onBack, onReload, onPush, p
   }
 
   function renderClauses(clauses) {
-    return clauses.map((clause, idx) => (
-      <Text key={`kh${idx}`} style={styles.lines}>
-        {clause}
-      </Text>
-    ));
+    return clauses.map((clause, idx) => {
+      if (!hasTableMarks(clause)) {
+        return (
+          <Text key={`kh${idx}`} style={styles.lines}>
+            {clause}
+          </Text>
+        );
+      }
+      // Khoản có bảng: tách đoạn chữ / bảng (dòng có tiền tố vô hình).
+      return (
+        <View key={`kh${idx}`}>
+          {splitTableSegments(clause).map((seg, k) =>
+            seg.type === "text" ? (
+              seg.text ? (
+                <Text key={`t${k}`} style={styles.lines}>
+                  {seg.text}
+                </Text>
+              ) : null
+            ) : (
+              <LawTable
+                key={`tb${k}`}
+                table={Tables[seg.id]}
+                lines={seg.lines}
+                renderText={(text, style) => (
+                  <Text selectable={true} style={style}>
+                    {text}
+                  </Text>
+                )}
+              />
+            ),
+          )}
+        </View>
+      );
+    });
   }
 
   const a = (key, i, key1, i1a, t) => {

@@ -4,6 +4,7 @@
 // - Các biến module-level bên dưới (lawInfo, roleSign...) bị convertBareTextInfo
 //   ghi đè -> hàm xử lý phải chạy với concurrency = 1 (xem index.js).
 const { normalizeLawKey } = require("./normalize");
+const { stripTableMarks } = require("./lawTables");
 
 let lawInfo = {};
 let roleSign = [];
@@ -1668,7 +1669,8 @@ function cleanText(text = "") {
       text = String(text);
     }
   }
-  return text
+  // b\u1ECF ti\u1EC1n t\u1ED1 v\u00F4 h\u00ECnh \u0111\u00E1nh d\u1EA5u d\u00F2ng b\u1EA3ng (lib/lawTables.js) tr\u01B0\u1EDBc khi embed
+  return stripTableMarks(text)
     .replace(/\u00A0/g, " ")
     .replace(/\s+/g, " ")
     .trim();

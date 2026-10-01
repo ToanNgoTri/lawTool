@@ -19,6 +19,7 @@ const { MongoClient } = require("mongodb");
 const scrape = require("./lib/scrape");
 const convert = require("./lib/convert");
 const pipeline = require("./lib/pipeline");
+const { pruneTables, stripTableMarks } = require("./lib/lawTables");
 
 // Chuỗi kết nối Mongo đọc từ .env — KHÔNG hardcode để tránh lộ trên GitHub.
 //   MONGODB_URI      -> LawMachine (metadata: LawCollection, LawSearch*)
@@ -227,7 +228,7 @@ exports.processLaw = onRequest(
 );
 
 // ─── POST /pushLaw ───────────────────────────────────────────────────────────────
-// Body: { lawInfo, data, fullText }. Embed (Ollama remote) -> Mongo (metadata + ragdb.chunks).
+// Body: { lawInfo, data, fullText, tables? }. Embed (Ollama remote) -> Mongo (metadata + ragdb.chunks).
 exports.pushLaw = onRequest(
   {
     cors: true,
@@ -238,6 +239,8 @@ exports.pushLaw = onRequest(
   async (req, res) => {
     try {
       const { lawInfo, data, fullText } = req.body || {};
+      // chỉ các bảng còn được tham chiếu trong nội dung (xem lib/lawTables.js)
+      const tables = pruneTables(req.body?.tables, data);
       if (!lawInfo || !data || !fullText) {
         return res.status(400).json({ success: false, error: "Thiếu lawInfo/data/fullText" });
       }
@@ -284,7 +287,7 @@ exports.pushLaw = onRequest(
       //    LawSearchDescription cũng chính là nguồn của ObjectLawPair -> văn bản vừa push
       //    tự động được nhận diện là "luật liên quan" về sau, không cần bước ghi riêng
       //    (thay hẳn addJSONFile cũ). Cập nhật luôn cache in-memory nếu instance này đã nạp.
-      const mongoOk = await pushMongo(lawInfo, data, fullText, lawNumberForPush);
+      const mongoOk = await pushMongo(lawInfo, data, stripTableMarks(fullText), lawNumberForPush, tables);
       // Cập nhật cache in-memory theo ĐÚNG cấu trúc 2 chiều của getObjectLawPair()
       // (khớp nextLawTool /api/getlawjson): tên -> số hiệu (chỉ luật), số hiệu -> mô tả.
       if (mongoOk && _lawPairCache) {
@@ -343,11 +346,17 @@ async function removeExisting(dbm, id) {
 }
 
 // ─── Mongo: port /api/push (3 thao tác) ─────────────────────────────────────────
-async function pushMongo(lawInfo, dataLaw, fullText, id) {
+async function pushMongo(lawInfo, dataLaw, fullText, id, tables) {
   const client = await getMongo();
   const dbm = client.db("LawMachine");
 
-  await dbm.collection("LawCollection").insertOne({ _id: id, info: lawInfo, content: dataLaw });
+  // `tables` chỉ ghi khi văn bản có bảng (app cũ bỏ qua field này).
+  await dbm.collection("LawCollection").insertOne({
+    _id: id,
+    info: lawInfo,
+    content: dataLaw,
+    ...(Array.isArray(tables) && tables.length ? { tables } : {}),
+  });
 
   await dbm.collection("LawSearchContent").insertOne({
     _id: id,

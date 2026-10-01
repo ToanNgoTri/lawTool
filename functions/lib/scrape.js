@@ -4,6 +4,7 @@
 
 const cheerio = require("cheerio");
 const { normalizeLawKey } = require("./normalize");
+const { extractContentTables } = require("./lawTables");
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
@@ -80,6 +81,10 @@ function parseDetail(html) {
   // Phải lấy thân thật (không phải doc-summary), nếu không sẽ trượt hết docitem.
   let body = $(".the-document-body").not(".doc-summary").first();
   if (!body.length) body = $(".the-document-body").first();
+
+  // Bảng trong nội dung: thay bằng các dòng text có tiền tố + lấy cấu trúc riêng
+  // (xem lib/lawTables.js). Phải chạy TRƯỚC khi đọc innerText bên dưới.
+  const tables = extractContentTables($, body, innerText);
 
   // Nội dung: lấy MỌI docitem trước docitem-9 (khối "Nơi nhận") -> mọi thứ sau
   // docitem-9 (phụ lục) bị loại, giống :not(.docitem-9 ~ div) gốc.
@@ -161,6 +166,7 @@ function parseDetail(html) {
     lawDescription,
     lawRelated,
     roleSign,
+    tables,
   };
 }
 

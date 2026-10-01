@@ -2,6 +2,7 @@
 // (getValueinArea + getInfo + clickToConvertContent) để chạy server-side.
 
 const convert = require("./convert");
+const { pruneTables } = require("./lawTables");
 // ObjectLawPair KHÔNG còn bundle sẵn từ JSON. Bản đồ tra "luật liên quan" giờ
 // dựng từ Mongo (LawMachine.LawSearchDescription) để web + RN dùng chung, luôn
 // cập nhật. index.js nạp/cache map rồi truyền vào processLaw().
@@ -115,6 +116,8 @@ async function processLaw(raw, objectLawPair) {
     fullText: converted.fullText,
     data: converted.data,
     lawNumberForPush,
+    // chỉ các bảng còn nằm trong nội dung cuối cùng (xem lib/lawTables.js)
+    tables: pruneTables(raw.tables, converted.data),
   };
 }
 

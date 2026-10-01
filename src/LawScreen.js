@@ -181,6 +181,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
         lawInfo: info,
         data: processed.data,
         fullText: processed.fullText,
+        tables: processed.tables,
         force,
       });
       if (r.duplicate) {
@@ -213,6 +214,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
     return (
       <Detail5View
         content={processed.data}
+        tables={processed.tables}
         info={mergedInfo() || processed.lawInfo}
         exists={exists}
         pushing={busy === "push"}

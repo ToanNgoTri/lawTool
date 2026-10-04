@@ -8,10 +8,16 @@ import { StatusBar, StyleSheet, BackHandler, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import CheckScreen from "./src/CheckScreen";
 import LawScreen from "./src/LawScreen";
+import { load, save } from "./src/session";
 
 function App() {
-  const [lawUrl, setLawUrl] = useState(null);
+  // nhớ văn bản đang mở: app bị Android tắt khi chạy nền thì mở lại đúng màn đó
+  const [lawUrl, setLawUrl] = useState(() => load("openLaw"));
   const checkRef = useRef(null);
+
+  useEffect(() => {
+    save("openLaw", lawUrl);
+  }, [lawUrl]);
 
   // Nút back cứng (Android): đang ở màn luật -> quay về danh sách (giữ nguyên
   // data danh sách vì CheckScreen không bị unmount). Ở danh sách -> thoát app.

@@ -386,12 +386,14 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
 
   const isFullyCollapsed = TopUnitCount > 0 && tittleArray.length >= TopUnitCount;
 
+  // dd/mm/yyyy có số 0 đứng trước như lawMachine Detail5 (formatDateVN). Tự pad
+  // thay vì Intl/toLocaleDateString vì Intl của Hermes (Android) không chắc có "2-digit".
   const infoDate = (d) => {
-    try {
-      return new Date(d).toLocaleDateString("vi-VN");
-    } catch {
-      return String(d);
-    }
+    if (!d) return "";
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return String(d);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
   };
 
   return (
@@ -637,7 +639,7 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.ModalInfoContent}>
-                      {Info && Info["lawDaySign"] ? infoDate(Info["lawDaySign"]) : ""}
+                      {infoDate(Info["lawDaySign"])}
                     </Text>
                   </View>
                 </View>

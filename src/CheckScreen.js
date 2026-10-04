@@ -1,4 +1,4 @@
-import { useState, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,14 @@ import {
 } from "react-native";
 import { CHECK_BUTTONS, URL_MAP } from "./config";
 import { check } from "./api";
+import { load, save } from "./session";
 
 const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
-  const [url, setUrl] = useState("");
-  const [items, setItems] = useState([]);
-  const [note, setNote] = useState("");
+  // danh sách lần check gần nhất lưu xuống máy (app bị tắt khi chạy nền vẫn còn)
+  const [saved] = useState(() => load("check") || {});
+  const [url, setUrl] = useState(saved.url || "");
+  const [items, setItems] = useState(Array.isArray(saved.items) ? saved.items : []);
+  const [note, setNote] = useState(saved.note || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,6 +26,11 @@ const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
     removeByHref: (href) =>
       setItems((prev) => prev.filter(([, h]) => h !== href)),
   }));
+
+  useEffect(() => {
+    const t = setTimeout(() => save("check", { url, items, note }), 500);
+    return () => clearTimeout(t);
+  }, [url, items, note]);
 
   async function runCheck(target) {
     if (!target) return;

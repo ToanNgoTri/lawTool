@@ -9,9 +9,13 @@ import {
   StyleSheet,
   Alert,
   BackHandler,
+  Keyboard,
+  AppState,
 } from "react-native";
 import { scrapeLaw, processLaw, pushLaw, checkExists } from "./api";
 import Detail5View from "./Detail5View";
+import { syncEditedTables } from "./lawTables";
+import { loadLaw, saveLaw, saveLawResult, clearLaw } from "./session";
 
 const FIELDS = [
   { key: "lawNumber", label: "lawNumber" },
@@ -51,27 +55,49 @@ const EMPTY = {
 
 const toISO = (d) => (d ? (typeof d === "string" ? d : new Date(d).toISOString()) : "");
 
+// Các chuỗi có thể chứa dòng bảng: content + nội dung từng phụ lục (cùng thứ tự).
+const tableTexts = (r) => [r.content, ...(r.appendix || []).map((a) => a && a.text)];
+
+// processLaw trả cả `output` (= content đã convert, đã chép vào raw.content) —
+// bỏ đi cho đỡ giữ thêm 1 bản văn bản trong RAM / bộ nhớ máy.
+const slimResult = (result) => (result ? { ...result, output: undefined } : null);
+
+// Chỉ 2 trường gốc dùng làm đầu vào convert (xem runProcess) — không giữ cả bản scrape.
+const scrapedBase = (r) => ({ lawDaySign: r.lawDaySign, lawDescription: r.lawDescription });
+
 export default function LawScreen({ url, onBack, onPushed }) {
-  const [raw, setRaw] = useState(EMPTY);
-  const [processed, setProcessed] = useState(null);
-  const [showDetail, setShowDetail] = useState(false);
-  const [exists, setExists] = useState(false);
-  const [busy, setBusy] = useState("scrape");
+  // Phiên đã lưu (app bị Android tắt khi chạy nền rồi mở lại) -> khôi phục y nguyên.
+  const [saved] = useState(() => loadLaw(url));
+  const [raw, setRaw] = useState(() => (saved?.raw ? { ...EMPTY, ...saved.raw } : EMPTY));
+  const [processed, setProcessed] = useState(() => saved?.processed || null);
+  const [showDetail, setShowDetail] = useState(() => !!(saved?.showDetail && saved?.processed));
+  const [exists, setExists] = useState(() => !!saved?.exists);
+  const [busy, setBusy] = useState(saved ? "" : "scrape");
   const [error, setError] = useState("");
-  const [pushed, setPushed] = useState(false);
+  const [pushed, setPushed] = useState(() => !!saved?.pushed);
   const scrollRef = useRef(null);
   // Bản scrape gốc — làm ĐẦU VÀO convert cho lawDaySign/lawDescription (form giữ bản đã convert).
-  const scrapedRef = useRef(EMPTY);
+  const scrapedRef = useRef(saved?.scraped || scrapedBase(EMPTY));
+  // Các chuỗi ứng với raw.tables hiện tại (lần scrape / xử lý gần nhất) — so với
+  // bản đang sửa để biết dòng bảng nào bị sửa (xem syncEditedTables).
+  const tableBaseRef = useRef(saved?.tableBase || []);
+  // Tăng mỗi lần sửa trường đầu vào: kết quả xử lý về trễ (đã sửa tiếp trong lúc
+  // chờ) thì bỏ, không thì Detail5 hiện bản CŨ dù form đã sửa.
+  const editSeqRef = useRef(0);
 
   const setField = (k, v) => {
     setRaw((prev) => ({ ...prev, [k]: v }));
-    if (!DISPLAY_KEYS.has(k)) setProcessed(null); // sửa trường ĐẦU VÀO -> phải xử lý lại
+    if (!DISPLAY_KEYS.has(k)) {
+      editSeqRef.current++;
+      setProcessed(null); // sửa trường ĐẦU VÀO -> phải xử lý lại
+    }
   };
 
   // Phụ lục / quy chế (raw.appendix: [{ title, text }]) là ĐẦU VÀO của processLaw
   // -> sửa / xoá / thêm đều phải xử lý lại.
   const setAppendix = (updater) => {
     setRaw((prev) => ({ ...prev, appendix: updater(prev.appendix || []) }));
+    editSeqRef.current++;
     setProcessed(null);
   };
   const updateAppendix = (i, patch) =>
@@ -83,21 +109,29 @@ export default function LawScreen({ url, onBack, onPushed }) {
   const runProcess = useCallback(async (formRaw) => {
     setBusy("process");
     setError("");
+    const seq = editSeqRef.current;
     try {
       const base = scrapedRef.current;
+      // Bảng vẽ từ raw.tables -> áp phần chữ đã sửa trong dòng bảng vào đó trước.
+      const tables = syncEditedTables(formRaw.tables, tableBaseRef.current, tableTexts(formRaw));
       const input = {
         ...formRaw,
+        tables,
         lawDaySign: base.lawDaySign,
         lawDescription: base.lawDescription,
       };
       const result = await processLaw(input);
-      setProcessed(result);
+      if (seq !== editSeqRef.current) return null; // đã sửa tiếp trong lúc xử lý
+      setProcessed(slimResult(result));
       const li = result.lawInfo || {};
+      const content = typeof result.output === "string" && result.output ? result.output : formRaw.content;
+      tableBaseRef.current = tableTexts({ ...formRaw, content });
       // Điền các trường ĐÃ CHUYỂN ĐỔI vào form. content -> hiển thị bản output đã
       // convert (partTwo) giống trang once của nextLawTool, không giữ text thô.
       setRaw((prev) => ({
         ...prev,
-        content: typeof result.output === "string" && result.output ? result.output : prev.content,
+        tables,
+        content,
         lawDaySign: toISO(li.lawDaySign) || prev.lawDaySign,
         lawDayActive: toISO(li.lawDayActive),
         lawNameDisplay: li.lawNameDisplay || "",
@@ -128,7 +162,9 @@ export default function LawScreen({ url, onBack, onPushed }) {
       setShowDetail(false);
       try {
         const scraped = { ...EMPTY, ...(await scrapeLaw(url)) };
-        scrapedRef.current = scraped;
+        scrapedRef.current = scrapedBase(scraped);
+        tableBaseRef.current = tableTexts(scraped);
+        editSeqRef.current++;
         setRaw(scraped);
         if (autoProcess) {
           await runProcess(scraped);
@@ -143,10 +179,53 @@ export default function LawScreen({ url, onBack, onPushed }) {
     [url, runProcess],
   );
 
-  // Lần đầu vào màn: scrape + tự Get content.
+  // Lần đầu vào màn: scrape + tự Get content (có phiên đã lưu thì dùng lại).
   useEffect(() => {
-    doScrape(true);
+    if (!saved) doScrape(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doScrape]);
+
+  // ─── Lưu phiên xuống máy ────────────────────────────────────────────────────
+  // Sửa form -> lưu sau 800ms ngừng gõ; app xuống nền -> lưu NGAY (Android có thể
+  // tắt app bất cứ lúc nào sau đó). Push xong thì xoá phiên.
+  const snapshot = () => ({
+    raw,
+    scraped: scrapedRef.current,
+    tableBase: tableBaseRef.current,
+    showDetail,
+    exists,
+    pushed,
+  });
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+  const canSave = busy !== "scrape" && raw !== EMPTY;
+
+  const flush = useCallback(() => {
+    const snap = snapshotRef.current();
+    if (snap.pushed) clearLaw(url);
+    else saveLaw(url, snap);
+  }, [url]);
+
+  useEffect(() => {
+    if (!canSave) return;
+    const t = setTimeout(flush, 800);
+    return () => clearTimeout(t);
+  }, [raw, showDetail, exists, pushed, canSave, flush]);
+
+  useEffect(() => {
+    if (busy === "scrape" || pushed) return;
+    saveLawResult(url, processed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processed]);
+
+  const canSaveRef = useRef(canSave);
+  canSaveRef.current = canSave;
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active" && canSaveRef.current) flush();
+    });
+    return () => sub.remove();
+  }, [flush]);
 
   useEffect(() => {
     const onHwBack = () => {
@@ -220,6 +299,84 @@ export default function LawScreen({ url, onBack, onPushed }) {
     }
   }
 
+  // ─── Nút ↑/↓: nhảy theo MỐC ────────────────────────────────────────────────
+  //  ↑: đầu lawNumber, đầu content, đầu nội dung phụ lục 1, 2… -> tới mốc gần nhất
+  //     PHÍA TRÊN chỗ đang xem (hết mốc thì lên đầu màn).
+  //  ↓: cuối content, cuối nội dung phụ lục 1, 2… -> mốc gần nhất PHÍA DƯỚI
+  //     (hết mốc thì xuống cuối màn).
+  // Vị trí đo bằng onLayout (toạ độ trong nội dung ScrollView).
+  // Mốc không đặt sát mép màn mà chừa CONTEXT_RATIO chiều cao màn để thấy phần
+  // trước (↑) / sau (↓) mốc.
+  const layoutRef = useRef({ fields: {}, apBox: {}, apText: {} });
+  const scrollYRef = useRef(0);
+  // chiều cao màn KHI KHÔNG có bàn phím (lớn nhất từng đo) — có bàn phím thì
+  // ScrollView co lại, nhảy theo chiều cao đó sẽ lệch khi bàn phím đóng.
+  const viewHRef = useRef(0);
+  const CONTEXT_RATIO = 0.2;
+
+  function anchors() {
+    const { fields, apBox, apText } = layoutRef.current;
+    const tops = [];
+    const bottoms = [];
+    if (fields.lawNumber) tops.push(fields.lawNumber.y);
+    if (fields.content) {
+      tops.push(fields.content.y);
+      bottoms.push(fields.content.y + fields.content.height);
+    }
+    (raw.appendix || []).forEach((_, i) => {
+      const box = apBox[i];
+      const txt = apText[i];
+      if (!box || !txt) return;
+      tops.push(box.y + txt.y);
+      bottoms.push(box.y + txt.y + txt.height);
+    });
+    return { tops, bottoms };
+  }
+
+  function jump(down) {
+    const sv = scrollRef.current;
+    if (!sv) return;
+    const y = scrollYRef.current;
+    const viewH = viewHRef.current;
+    const gap = Math.round(viewH * CONTEXT_RATIO);
+    const { tops, bottoms } = anchors();
+    if (down) {
+      const targets = bottoms
+        .map((b) => Math.max(0, b - viewH + gap))
+        .filter((t) => t > y + 4)
+        .sort((a, b) => a - b);
+      if (targets.length) scrollToY(targets[0]);
+      else sv.scrollToEnd({ animated: true });
+    } else {
+      const targets = tops
+        .map((t) => Math.max(0, t - gap))
+        .filter((t) => t < y - 4)
+        .sort((a, b) => b - a);
+      scrollToY(targets.length ? targets[0] : 0);
+    }
+  }
+
+  // Cuộn bằng code (animated) trên Android không phải lúc nào cũng bắn sự kiện
+  // onScroll cuối -> scrollYRef kẹt ở vị trí giữa chừng, lần bấm sau tính sai mốc.
+  // Ghi luôn vị trí đích.
+  function scrollToY(target) {
+    scrollRef.current?.scrollTo({ y: target, animated: true });
+    scrollYRef.current = target;
+  }
+
+  // Đang focus 1 ô nhập thì Android cuộn NGƯỢC về ô đó (giữ con trỏ trong tầm
+  // nhìn) -> bỏ focus + đóng bàn phím TRƯỚC rồi nhảy NGAY (không đợi bàn phím đóng:
+  // đợi ~1s khiến tưởng bấm không ăn, phải bấm lần 2). Mốc tính theo chiều cao màn
+  // đầy đủ (viewHRef) nên bàn phím đóng xong vẫn đúng chỗ.
+  function scrollStep(down) {
+    const focused = TextInput.State.currentlyFocusedInput?.();
+    if (focused || Keyboard.isVisible?.()) {
+      focused?.blur?.();
+      Keyboard.dismiss();
+    }
+    jump(down);
+  }
+
   // ─── Detail5: xem lần cuối trước khi push ───────────────────────────────────
   if (showDetail && processed) {
     return (
@@ -241,7 +398,14 @@ export default function LawScreen({ url, onBack, onPushed }) {
   // ─── Màn once (sửa trường) ───────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: "#141414" }}>
-      <ScrollView ref={scrollRef} style={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        style={styles.container}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={32}
+        onScroll={(e) => (scrollYRef.current = e.nativeEvent.contentOffset.y)}
+        onLayout={(e) => (viewHRef.current = Math.max(viewHRef.current, e.nativeEvent.layout.height))}
+      >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={onBack}>
             <Text style={styles.back}>← Danh sách</Text>
@@ -268,7 +432,11 @@ export default function LawScreen({ url, onBack, onPushed }) {
         {!!error && <Text style={styles.error}>Lỗi: {error}</Text>}
 
         {FIELDS.map((f) => (
-          <View key={f.key} style={{ marginBottom: 8 }}>
+          <View
+            key={f.key}
+            style={{ marginBottom: 8 }}
+            onLayout={(e) => (layoutRef.current.fields[f.key] = e.nativeEvent.layout)}
+          >
             <Text style={styles.label}>{f.label}</Text>
             <TextInput
               style={[styles.input, f.big && styles.inputBig]}
@@ -284,7 +452,11 @@ export default function LawScreen({ url, onBack, onPushed }) {
           Phụ lục / quy chế ({(raw.appendix || []).length}) — nối vào cuối content
         </Text>
         {(raw.appendix || []).map((a, i) => (
-          <View key={`ap${i}`} style={styles.appendixBox}>
+          <View
+            key={`ap${i}`}
+            style={styles.appendixBox}
+            onLayout={(e) => (layoutRef.current.apBox[i] = e.nativeEvent.layout)}
+          >
             <View style={styles.appendixHead}>
               <Text style={styles.label}>Tên phụ lục {i + 1}</Text>
               <TouchableOpacity onPress={() => removeAppendix(i)}>
@@ -298,14 +470,16 @@ export default function LawScreen({ url, onBack, onPushed }) {
               multiline
               placeholderTextColor="#666"
             />
-            <Text style={[styles.label, { marginTop: 6 }]}>Nội dung</Text>
-            <TextInput
-              style={[styles.input, styles.inputBig]}
-              value={a.text}
-              onChangeText={(v) => updateAppendix(i, { text: v })}
-              multiline
-              placeholderTextColor="#666"
-            />
+            <View onLayout={(e) => (layoutRef.current.apText[i] = e.nativeEvent.layout)}>
+              <Text style={[styles.label, { marginTop: 6 }]}>Nội dung</Text>
+              <TextInput
+                style={[styles.input, styles.inputBig]}
+                value={a.text}
+                onChangeText={(v) => updateAppendix(i, { text: v })}
+                multiline
+                placeholderTextColor="#666"
+              />
+            </View>
           </View>
         ))}
         <TouchableOpacity style={styles.appendixAdd} onPress={addAppendix} disabled={busy !== ""}>
@@ -318,17 +492,17 @@ export default function LawScreen({ url, onBack, onPushed }) {
         <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* Nút cuộn lên đầu / xuống cuối */}
+      {/* ↑ đầu lawNumber / content / phụ lục…, ↓ cuối content / phụ lục… */}
       <View style={styles.fabColumn}>
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          onPress={() => scrollStep(false)}
         >
           <Text style={styles.fabText}>↑</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          onPress={() => scrollStep(true)}
         >
           <Text style={styles.fabText}>↓</Text>
         </TouchableOpacity>

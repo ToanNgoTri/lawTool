@@ -12,7 +12,7 @@ import { CHECK_BUTTONS, URL_MAP } from "./config";
 import { check } from "./api";
 import { load, save } from "./session";
 
-const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
+const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw, onOpenConfig }, ref) {
   // danh sách lần check gần nhất lưu xuống máy (app bị tắt khi chạy nền vẫn còn)
   const [saved] = useState(() => load("check") || {});
   const [url, setUrl] = useState(saved.url || "");
@@ -55,7 +55,12 @@ const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Kiểm tra văn bản mới</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Kiểm tra văn bản mới</Text>
+        <TouchableOpacity onPress={onOpenConfig}>
+          <Text style={styles.configBtn}>⚙ AppConfig</Text>
+        </TouchableOpacity>
+      </View>
 
       <TextInput
         style={styles.input}
@@ -113,7 +118,9 @@ export default CheckScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 12, backgroundColor: "#141414" },
-  title: { color: "#eee", fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  title: { color: "#eee", fontSize: 18, fontWeight: "600" },
+  configBtn: { color: "#FF9800", fontSize: 14 },
   input: {
     borderWidth: 1,
     borderColor: "#444",

@@ -382,3 +382,47 @@ async function pushMongo(lawInfo, dataLaw, fullText, id, tables) {
 
   return true;
 }
+
+// ─── AppConfig (LawMachine.AppConfig) ────────────────────────────────────────────
+// Cấu hình app đọc lúc khởi động (vd doc "update": forceUpdate, latestVersionAndroid...).
+// Chỉ cho đụng ĐÚNG collection này — màn AppConfigScreen của RN sửa từng doc.
+function appConfigCol(client) {
+  return client.db("LawMachine").collection("AppConfig");
+}
+
+// GET /getAppConfig -> { docs: [{ _id, ...fields }] }
+exports.getAppConfig = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  try {
+    const client = await getMongo();
+    const docs = await appConfigCol(client).find({}).sort({ _id: 1 }).toArray();
+    res.json({ success: true, docs });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});
+
+// POST /saveAppConfig { id, doc } -> ghi đè toàn bộ field của doc `id` (upsert).
+// Client gửi nguyên doc (giữ kiểu boolean/number/object) -> field bị xoá trên app
+// cũng mất trong Mongo. delete=true để xoá hẳn doc.
+exports.saveAppConfig = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  try {
+    const { id, doc } = req.body || {};
+    if (typeof id !== "string" || !id.trim()) {
+      return res.status(400).json({ success: false, error: "Thiếu id" });
+    }
+    const col = appConfigCol(await getMongo());
+    if (req.body.delete === true) {
+      const r = await col.deleteOne({ _id: id });
+      return res.json({ success: true, deleted: r.deletedCount });
+    }
+    if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+      return res.status(400).json({ success: false, error: "doc phải là object" });
+    }
+    const { _id, ...fields } = doc; // không cho đổi _id
+    await col.replaceOne({ _id: id }, fields, { upsert: true });
+    const saved = await col.findOne({ _id: id });
+    res.json({ success: true, doc: saved });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});

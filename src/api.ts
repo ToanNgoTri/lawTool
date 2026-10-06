@@ -119,3 +119,23 @@ export async function pushLaw(payload: {
   if (!res.ok && !json.duplicate) throw new Error(json.error || `HTTP ${res.status}`);
   return json;
 }
+
+// ─── AppConfig (LawMachine.AppConfig) ───────────────────────────────────────────
+export type AppConfigDoc = { _id: string; [field: string]: any };
+
+// GET /getAppConfig -> tất cả doc cấu hình
+export async function getAppConfig(): Promise<AppConfigDoc[]> {
+  const json = await getJSON("getAppConfig");
+  return (json.docs || []) as AppConfigDoc[];
+}
+
+// POST /saveAppConfig -> ghi đè toàn bộ field của doc (upsert), trả doc đã lưu
+export async function saveAppConfig(id: string, doc: Record<string, any>): Promise<AppConfigDoc> {
+  const json = await postJSON("saveAppConfig", { id, doc });
+  return json.doc as AppConfigDoc;
+}
+
+// POST /saveAppConfig { delete: true } -> xoá hẳn doc
+export async function deleteAppConfig(id: string): Promise<void> {
+  await postJSON("saveAppConfig", { id, delete: true });
+}

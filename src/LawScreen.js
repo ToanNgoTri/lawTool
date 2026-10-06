@@ -304,15 +304,21 @@ export default function LawScreen({ url, onBack, onPushed }) {
   //     PHÍA TRÊN chỗ đang xem (hết mốc thì lên đầu màn).
   //  ↓: cuối content, cuối nội dung phụ lục 1, 2… -> mốc gần nhất PHÍA DƯỚI
   //     (hết mốc thì xuống cuối màn).
+  //  Nhấn giữ (long press): lên thẳng đầu / xuống thẳng cuối.
   // Vị trí đo bằng onLayout (toạ độ trong nội dung ScrollView).
   // Mốc không đặt sát mép màn mà chừa CONTEXT_RATIO chiều cao màn để thấy phần
   // trước (↑) / sau (↓) mốc.
+  // Mốc cách chỗ đang xem / cách đầu-cuối màn chưa tới MIN_STEP_RATIO màn thì bỏ
+  // qua (nhảy luôn tới mốc kế / đầu-cuối) — không thì 1 lần bấm chỉ nhích vài px
+  // (vd mốc lawNumber sát đầu màn, cuối phụ lục cuối sát cuối màn), phải bấm 2 lần.
   const layoutRef = useRef({ fields: {}, apBox: {}, apText: {} });
   const scrollYRef = useRef(0);
   // chiều cao màn KHI KHÔNG có bàn phím (lớn nhất từng đo) — có bàn phím thì
   // ScrollView co lại, nhảy theo chiều cao đó sẽ lệch khi bàn phím đóng.
   const viewHRef = useRef(0);
+  const contentHRef = useRef(0);
   const CONTEXT_RATIO = 0.2;
+  const MIN_STEP_RATIO = 0.15;
 
   function anchors() {
     const { fields, apBox, apText } = layoutRef.current;
@@ -339,20 +345,23 @@ export default function LawScreen({ url, onBack, onPushed }) {
     const y = scrollYRef.current;
     const viewH = viewHRef.current;
     const gap = Math.round(viewH * CONTEXT_RATIO);
+    const minStep = Math.round(viewH * MIN_STEP_RATIO);
+    const maxY = Math.max(0, contentHRef.current - viewH);
     const { tops, bottoms } = anchors();
     if (down) {
       const targets = bottoms
-        .map((b) => Math.max(0, b - viewH + gap))
-        .filter((t) => t > y + 4)
+        .map((b) => Math.min(maxY, Math.max(0, b - viewH + gap)))
+        .filter((t) => t > y + minStep)
         .sort((a, b) => a - b);
-      if (targets.length) scrollToY(targets[0]);
-      else sv.scrollToEnd({ animated: true });
+      if (targets.length && targets[0] < maxY - minStep) scrollToY(targets[0]);
+      else scrollToEdge(true);
     } else {
       const targets = tops
         .map((t) => Math.max(0, t - gap))
-        .filter((t) => t < y - 4)
+        .filter((t) => t < y - minStep)
         .sort((a, b) => b - a);
-      scrollToY(targets.length ? targets[0] : 0);
+      if (targets.length && targets[0] > minStep) scrollToY(targets[0]);
+      else scrollToEdge(false);
     }
   }
 
@@ -364,17 +373,33 @@ export default function LawScreen({ url, onBack, onPushed }) {
     scrollYRef.current = target;
   }
 
+  function scrollToEdge(down) {
+    if (down) {
+      scrollRef.current?.scrollToEnd({ animated: true });
+      scrollYRef.current = Math.max(0, contentHRef.current - viewHRef.current);
+    } else scrollToY(0);
+  }
+
   // Đang focus 1 ô nhập thì Android cuộn NGƯỢC về ô đó (giữ con trỏ trong tầm
   // nhìn) -> bỏ focus + đóng bàn phím TRƯỚC rồi nhảy NGAY (không đợi bàn phím đóng:
   // đợi ~1s khiến tưởng bấm không ăn, phải bấm lần 2). Mốc tính theo chiều cao màn
   // đầy đủ (viewHRef) nên bàn phím đóng xong vẫn đúng chỗ.
-  function scrollStep(down) {
+  function dismissInput() {
     const focused = TextInput.State.currentlyFocusedInput?.();
     if (focused || Keyboard.isVisible?.()) {
       focused?.blur?.();
       Keyboard.dismiss();
     }
+  }
+
+  function scrollStep(down) {
+    dismissInput();
     jump(down);
+  }
+
+  function scrollEdge(down) {
+    dismissInput();
+    scrollToEdge(down);
   }
 
   // ─── Detail5: xem lần cuối trước khi push ───────────────────────────────────
@@ -405,6 +430,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
         scrollEventThrottle={32}
         onScroll={(e) => (scrollYRef.current = e.nativeEvent.contentOffset.y)}
         onLayout={(e) => (viewHRef.current = Math.max(viewHRef.current, e.nativeEvent.layout.height))}
+        onContentSizeChange={(w, h) => (contentHRef.current = h)}
       >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={onBack}>
@@ -492,17 +518,19 @@ export default function LawScreen({ url, onBack, onPushed }) {
         <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* ↑ đầu lawNumber / content / phụ lục…, ↓ cuối content / phụ lục… */}
+      {/* ↑ đầu lawNumber / content / phụ lục…, ↓ cuối content / phụ lục…; giữ = đầu/cuối màn */}
       <View style={styles.fabColumn}>
         <TouchableOpacity
           style={styles.fab}
           onPress={() => scrollStep(false)}
+          onLongPress={() => scrollEdge(false)}
         >
           <Text style={styles.fabText}>↑</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.fab}
           onPress={() => scrollStep(true)}
+          onLongPress={() => scrollEdge(true)}
         >
           <Text style={styles.fabText}>↓</Text>
         </TouchableOpacity>

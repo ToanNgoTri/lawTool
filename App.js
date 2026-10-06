@@ -8,11 +8,13 @@ import { StatusBar, StyleSheet, BackHandler, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import CheckScreen from "./src/CheckScreen";
 import LawScreen from "./src/LawScreen";
+import AppConfigScreen from "./src/AppConfigScreen";
 import { load, save } from "./src/session";
 
 function App() {
   // nhớ văn bản đang mở: app bị Android tắt khi chạy nền thì mở lại đúng màn đó
   const [lawUrl, setLawUrl] = useState(() => load("openLaw"));
+  const [showConfig, setShowConfig] = useState(false);
   const checkRef = useRef(null);
 
   useEffect(() => {
@@ -23,6 +25,10 @@ function App() {
   // data danh sách vì CheckScreen không bị unmount). Ở danh sách -> thoát app.
   useEffect(() => {
     const onBack = () => {
+      if (showConfig) {
+        setShowConfig(false);
+        return true;
+      }
       if (lawUrl) {
         setLawUrl(null);
         return true; // đã xử lý -> không thoát app
@@ -31,7 +37,7 @@ function App() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
     return () => sub.remove();
-  }, [lawUrl]);
+  }, [lawUrl, showConfig]);
 
   return (
     <SafeAreaProvider>
@@ -39,7 +45,11 @@ function App() {
       <View style={styles.container}>
         {/* CheckScreen LUÔN mounted -> giữ nguyên danh sách đã lấy khi back về */}
         <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-          <CheckScreen ref={checkRef} onOpenLaw={(url) => setLawUrl(url)} />
+          <CheckScreen
+            ref={checkRef}
+            onOpenLaw={(url) => setLawUrl(url)}
+            onOpenConfig={() => setShowConfig(true)}
+          />
         </SafeAreaView>
 
         {/* LawScreen phủ lên trên khi mở 1 văn bản */}
@@ -54,6 +64,16 @@ function App() {
               onBack={() => setLawUrl(null)}
               onPushed={(url) => checkRef.current?.removeByHref(url)}
             />
+          </SafeAreaView>
+        )}
+
+        {/* AppConfigScreen: sửa LawMachine.AppConfig trên Mongo */}
+        {showConfig && (
+          <SafeAreaView
+            style={[StyleSheet.absoluteFill, styles.container]}
+            edges={["top", "left", "right"]}
+          >
+            <AppConfigScreen onBack={() => setShowConfig(false)} />
           </SafeAreaView>
         )}
       </View>

@@ -10,6 +10,7 @@ import {
   Alert,
   BackHandler,
   Keyboard,
+  KeyboardAvoidingView,
   AppState,
 } from "react-native";
 import { scrapeLaw, processLaw, pushLaw, checkExists } from "./api";
@@ -422,7 +423,9 @@ export default function LawScreen({ url, onBack, onPushed }) {
 
   // ─── Màn once (sửa trường) ───────────────────────────────────────────────────
   return (
-    <View style={{ flex: 1, backgroundColor: "#141414" }}>
+    // targetSdk 36 -> Android 15+ ép edge-to-edge, adjustResize không còn co cửa sổ
+    // -> bàn phím đè ScrollView. KeyboardAvoidingView chừa padding bằng phần bị che.
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: "#141414" }}>
       <ScrollView
         ref={scrollRef}
         style={styles.container}
@@ -535,7 +538,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
           <Text style={styles.fabText}>↓</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

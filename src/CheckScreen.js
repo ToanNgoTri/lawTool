@@ -12,7 +12,7 @@ import { CHECK_BUTTONS, URL_MAP } from "./config";
 import { check } from "./api";
 import { load, save } from "./session";
 
-const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw, onOpenConfig }, ref) {
+const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw, onOpenConfig, onOpenDefaultLaws }, ref) {
   // danh sách lần check gần nhất lưu xuống máy (app bị tắt khi chạy nền vẫn còn)
   const [saved] = useState(() => load("check") || {});
   const [url, setUrl] = useState(saved.url || "");
@@ -57,9 +57,14 @@ const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw, onOpenConfig },
     <View style={styles.container}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>Kiểm tra văn bản mới</Text>
-        <TouchableOpacity onPress={onOpenConfig}>
-          <Text style={styles.configBtn}>⚙ AppConfig</Text>
-        </TouchableOpacity>
+        <View style={styles.titleActions}>
+          <TouchableOpacity onPress={onOpenDefaultLaws}>
+            <Text style={styles.configBtn}>⬇ Tải sẵn</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onOpenConfig}>
+            <Text style={styles.configBtn}>⚙ AppConfig</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TextInput
@@ -120,6 +125,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 12, backgroundColor: "#141414" },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   title: { color: "#eee", fontSize: 18, fontWeight: "600" },
+  titleActions: { flexDirection: "row", gap: 14 },
   configBtn: { color: "#FF9800", fontSize: 14 },
   input: {
     borderWidth: 1,

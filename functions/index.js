@@ -426,3 +426,110 @@ exports.saveAppConfig = onRequest({ cors: true, timeoutSeconds: 30 }, async (req
     sendErr(res, err);
   }
 });
+
+// ─── DefaultLaws (LawMachine.DefaultLaws) ───────────────────────────────────────
+// Văn bản app lawMachine TỰ TẢI về máy ngay lần mở đầu tiên sau khi cài
+// (lawMachine functions/getDefaultLaws). Doc: { _id: lawId, order, addedAt }.
+// Màn DefaultLawsScreen của RN thêm / bớt / sắp thứ tự.
+function defaultLawsCol(client) {
+  return client.db("LawMachine").collection("DefaultLaws");
+}
+
+// GET /getDefaultLaws -> { docs: [{ _id, order, addedAt, info|null }] } theo order.
+// info lấy từ LawSearchDescription; null = văn bản đã bị xoá khỏi DB (app bỏ qua).
+exports.getDefaultLaws = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  try {
+    const client = await getMongo();
+    const docs = await defaultLawsCol(client).find({}).sort({ order: 1, addedAt: 1 }).toArray();
+    const infos = await client
+      .db("LawMachine")
+      .collection("LawSearchDescription")
+      .find({ _id: { $in: docs.map((d) => d._id) } }, { projection: { info: 1 } })
+      .toArray();
+    const byId = new Map(infos.map((d) => [d._id, d.info || {}]));
+    res.json({ success: true, docs: docs.map((d) => ({ ...d, info: byId.get(d._id) || null })) });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});
+
+// GET /searchLaws?q=... -> { items: [{ _id, info }] } (tối đa 30) để chọn văn bản
+// thêm vào DefaultLaws: khớp số hiệu, tên hoặc trích yếu.
+exports.searchLaws = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    if (!q) return res.json({ success: true, items: [] });
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const client = await getMongo();
+    const items = await client
+      .db("LawMachine")
+      .collection("LawSearchDescription")
+      .find(
+        { $or: [{ _id: re }, { "info.lawNameDisplay": re }, { "info.lawDescription": re }] },
+        { projection: { info: 1 } },
+      )
+      .sort({ "info.lawDaySign": -1 })
+      .limit(30)
+      .toArray();
+    res.json({ success: true, items });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});
+
+// POST /saveDefaultLaws
+//   { action: "add", id }      -> thêm cuối danh sách (văn bản phải có trong LawCollection)
+//   { action: "remove", id }   -> bỏ khỏi danh sách
+//   { action: "order", ids }   -> ghi lại order theo đúng thứ tự ids
+exports.saveDefaultLaws = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  try {
+    const { action, id, ids } = req.body || {};
+    const client = await getMongo();
+    const col = defaultLawsCol(client);
+
+    if (action === "add") {
+      if (typeof id !== "string" || !id.trim()) {
+        return res.status(400).json({ success: false, error: "Thiếu id" });
+      }
+      const exists = await client
+        .db("LawMachine")
+        .collection("LawCollection")
+        .findOne({ _id: id }, { projection: { _id: 1 } });
+      if (!exists) {
+        return res.status(404).json({ success: false, error: `Không có văn bản "${id}" trong LawCollection` });
+      }
+      const last = await col.find({}).sort({ order: -1 }).limit(1).toArray();
+      const order = last.length ? (last[0].order || 0) + 1 : 1;
+      const r = await col.updateOne(
+        { _id: id },
+        { $setOnInsert: { order, addedAt: new Date() } },
+        { upsert: true },
+      );
+      return res.json({ success: true, added: r.upsertedCount });
+    }
+
+    if (action === "remove") {
+      if (typeof id !== "string" || !id) {
+        return res.status(400).json({ success: false, error: "Thiếu id" });
+      }
+      const r = await col.deleteOne({ _id: id });
+      return res.json({ success: true, deleted: r.deletedCount });
+    }
+
+    if (action === "order") {
+      if (!Array.isArray(ids) || ids.some((x) => typeof x !== "string")) {
+        return res.status(400).json({ success: false, error: "ids phải là mảng chuỗi" });
+      }
+      if (ids.length) {
+        await col.bulkWrite(
+          ids.map((x, i) => ({ updateOne: { filter: { _id: x }, update: { $set: { order: i + 1 } } } })),
+        );
+      }
+      return res.json({ success: true });
+    }
+
+    res.status(400).json({ success: false, error: "action phải là add | remove | order" });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});

@@ -139,3 +139,38 @@ export async function saveAppConfig(id: string, doc: Record<string, any>): Promi
 export async function deleteAppConfig(id: string): Promise<void> {
   await postJSON("saveAppConfig", { id, delete: true });
 }
+
+// ─── DefaultLaws (LawMachine.DefaultLaws) ───────────────────────────────────────
+// Văn bản app lawMachine tự tải về máy khi người dùng mới cài app.
+export type LawBrief = {
+  lawNameDisplay?: string;
+  lawDescription?: string;
+  lawDaySign?: string;
+  lawDayActive?: string;
+};
+export type DefaultLawDoc = { _id: string; order: number; addedAt?: string; info: LawBrief | null };
+
+// GET /getDefaultLaws -> danh sách theo order (info null = văn bản không còn trong DB)
+export async function getDefaultLaws(): Promise<DefaultLawDoc[]> {
+  const json = await getJSON("getDefaultLaws");
+  return (json.docs || []) as DefaultLawDoc[];
+}
+
+// GET /searchLaws -> văn bản trong DB khớp số hiệu / tên / trích yếu
+export async function searchLaws(q: string): Promise<{ _id: string; info: LawBrief }[]> {
+  const json = await getJSON(`searchLaws?q=${encodeURIComponent(q)}`);
+  return json.items || [];
+}
+
+export async function addDefaultLaw(id: string): Promise<void> {
+  await postJSON("saveDefaultLaws", { action: "add", id });
+}
+
+export async function removeDefaultLaw(id: string): Promise<void> {
+  await postJSON("saveDefaultLaws", { action: "remove", id });
+}
+
+// ghi lại thứ tự tải (order = vị trí trong ids)
+export async function orderDefaultLaws(ids: string[]): Promise<void> {
+  await postJSON("saveDefaultLaws", { action: "order", ids });
+}

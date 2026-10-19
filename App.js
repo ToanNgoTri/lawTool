@@ -9,12 +9,14 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import CheckScreen from "./src/CheckScreen";
 import LawScreen from "./src/LawScreen";
 import AppConfigScreen from "./src/AppConfigScreen";
+import DefaultLawsScreen from "./src/DefaultLawsScreen";
 import { load, save } from "./src/session";
 
 function App() {
   // nhớ văn bản đang mở: app bị Android tắt khi chạy nền thì mở lại đúng màn đó
   const [lawUrl, setLawUrl] = useState(() => load("openLaw"));
   const [showConfig, setShowConfig] = useState(false);
+  const [showDefaultLaws, setShowDefaultLaws] = useState(false);
   const checkRef = useRef(null);
 
   useEffect(() => {
@@ -29,6 +31,10 @@ function App() {
         setShowConfig(false);
         return true;
       }
+      if (showDefaultLaws) {
+        setShowDefaultLaws(false);
+        return true;
+      }
       if (lawUrl) {
         setLawUrl(null);
         return true; // đã xử lý -> không thoát app
@@ -37,7 +43,7 @@ function App() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
     return () => sub.remove();
-  }, [lawUrl, showConfig]);
+  }, [lawUrl, showConfig, showDefaultLaws]);
 
   return (
     <SafeAreaProvider>
@@ -49,6 +55,7 @@ function App() {
             ref={checkRef}
             onOpenLaw={(url) => setLawUrl(url)}
             onOpenConfig={() => setShowConfig(true)}
+            onOpenDefaultLaws={() => setShowDefaultLaws(true)}
           />
         </SafeAreaView>
 
@@ -74,6 +81,16 @@ function App() {
             edges={["top", "left", "right"]}
           >
             <AppConfigScreen onBack={() => setShowConfig(false)} />
+          </SafeAreaView>
+        )}
+
+        {/* DefaultLawsScreen: văn bản lawMachine tự tải khi mới cài (LawMachine.DefaultLaws) */}
+        {showDefaultLaws && (
+          <SafeAreaView
+            style={[StyleSheet.absoluteFill, styles.container]}
+            edges={["top", "left", "right"]}
+          >
+            <DefaultLawsScreen onBack={() => setShowDefaultLaws(false)} />
           </SafeAreaView>
         )}
       </View>

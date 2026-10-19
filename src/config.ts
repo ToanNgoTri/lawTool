@@ -12,7 +12,8 @@
 //   - [A] USB adb reverse:     http://localhost:5001/lawtool-f8b15/asia-southeast1
 //   - [B] WiFi (IP PC):        http://192.168.80.11:5001/lawtool-f8b15/asia-southeast1
 //   - Đã deploy (Ollama remote): https://asia-southeast1-lawtool-f8b15.cloudfunctions.net
-export const FUNCTIONS_BASE_URL = "http://10.0.2.2:5001/lawtool-f8b15/asia-southeast1"; // TEMP-EMU
+export const FUNCTIONS_BASE_URL =
+  "https://asia-southeast1-lawtool-f8b15.cloudfunctions.net";
 // export const FUNCTIONS_BASE_URL =
 //   "http://192.168.80.11:5001/lawtool-f8b15/asia-southeast1";
 

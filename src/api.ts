@@ -33,9 +33,25 @@ export type ProcessResult = {
   tables: LawTableData[]; // chỉ các bảng còn nằm trong data
 };
 
+// Đọc body JSON; server trả trang HTML (404 khi function chưa deploy, 5xx...)
+// thì báo lỗi rõ ràng thay vì "JSON Parse error: Unexpected character: <".
+async function readJSON(res: Response, path: string): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const name = path.split("?")[0];
+    throw new Error(
+      res.status === 404
+        ? `Không tìm thấy function "${name}" (404) — chưa deploy?`
+        : `HTTP ${res.status}: server không trả JSON (${name})`,
+    );
+  }
+}
+
 async function getJSON(path: string): Promise<any> {
   const res = await fetch(`${FUNCTIONS_BASE_URL}/${path}`);
-  const json = await res.json();
+  const json = await readJSON(res, path);
   if (!res.ok || json.success === false) {
     throw new Error(json.error || `HTTP ${res.status}`);
   }
@@ -48,7 +64,7 @@ async function postJSON(path: string, body: any): Promise<any> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const json = await res.json();
+  const json = await readJSON(res, path);
   if (!res.ok || json.success === false) {
     throw new Error(json.error || `HTTP ${res.status}`);
   }

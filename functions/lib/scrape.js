@@ -6,6 +6,7 @@ const cheerio = require("cheerio");
 const { normalizeLawKey } = require("./normalize");
 const { extractContentTables } = require("./lawTables");
 const { planAppendixBlocks, readAppendix } = require("./lawAppendix");
+const { removeFootnotes } = require("./lawFootnotes");
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
@@ -82,6 +83,10 @@ function parseDetail(html) {
   // Phải lấy thân thật (không phải doc-summary), nếu không sẽ trượt hết docitem.
   let body = $(".the-document-body").not(".doc-summary").first();
   if (!body.length) body = $(".the-document-body").first();
+
+  // Chú thích VBHN (số <sup> + đoạn "Điểm này được sửa đổi…"): xoá trước mọi
+  // bước đọc text (lib/lawFootnotes.js).
+  removeFootnotes($, body);
 
   // Phụ lục sau chữ ký (lib/lawAppendix.js): chia khối + XOÁ biểu mẫu khỏi DOM —
   // phải TRƯỚC khi tách bảng để bảng của biểu mẫu không bị lấy.

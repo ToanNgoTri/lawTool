@@ -384,7 +384,8 @@ async function pushMongo(lawInfo, dataLaw, fullText, id, tables) {
 }
 
 // ─── AppConfig (LawMachine.AppConfig) ────────────────────────────────────────────
-// Cấu hình app đọc lúc khởi động (vd doc "update": forceUpdate, latestVersionAndroid...).
+// Cấu hình app đọc lúc khởi động (vd doc "update": forceUpdate, shouldUpdate,
+// recommendedVersionAndroid/iOS — bản khuyến nghị do admin đặt, app chỉ đọc).
 // Chỉ cho đụng ĐÚNG collection này — màn AppConfigScreen của RN sửa từng doc.
 function appConfigCol(client) {
   return client.db("LawMachine").collection("AppConfig");

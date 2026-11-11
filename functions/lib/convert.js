@@ -479,6 +479,32 @@ async function getLawRelated(text, dayActive, ObjectLawPair, lawNumber) {
   return Object.keys(result);
 }
 
+// Số hiệu văn bản được viện dẫn trong NỘI DUNG (Điều/Khoản), không chỉ phần
+// "Căn cứ…" — vd TT 167/2026/TT-BTC liệt kê 10 thông tư ở Điều 1.
+// Quét TỪNG DÒNG (không dùng regex lookbehind `ví dụ.*` của getLawRelated: trên
+// text 1 dòng nó bỏ mọi số hiệu sau chữ "ví dụ" đầu tiên và chạy O(n²) với luật dài).
+// Giữ khớp hệt nextLawTool/app/main.js.
+const LAW_ID_IN_TEXT =
+  /(?<![\p{L}\p{N}\/.\-])(?:\d+\/\d{4}\/(?:QH|UBTVQH)\d{1,2}|\d+(?:\/\d{4})?\/\p{L}{1,10}(?:-[\p{L}\p{N}]+)+)/gu;
+
+function getLawIdsInContent(text, lawNumber) {
+  if (!text) return [];
+  const ids = [];
+  for (const line of String(text).split("\n")) {
+    for (const m of line.matchAll(LAW_ID_IN_TEXT)) {
+      const before = line.slice(0, m.index);
+      if (/mẫu(\s+số)?\s*$/i.test(before) || /ví dụ/i.test(before)) continue;
+      const id = m[0];
+      if (id !== lawNumber && !ids.includes(id)) ids.push(id);
+    }
+  }
+  return ids;
+}
+
+function mergeLawIds(a, b) {
+  return [...new Set([...(a || []), ...(b || [])])];
+}
+
 function RemoveNoOrder(array) {
   let prev;
   for (let l = 0; l < array.length; l++) {
@@ -844,6 +870,7 @@ async function convertBareTextInfo(
       lawNumber,
     );
   }
+  lawRelated = mergeLawIds(lawRelated, getLawIdsInContent(inputText, lawNumber));
 
   lawDaySign = lawDaySign.includes('/')?addDaysToDate(lawDaySign, 0):new Date(lawDaySign);
 
@@ -920,6 +947,10 @@ async function getNormalTextInfo(
     lawDayActive,
     ObjectLawPair,
     lawNumber,
+  );
+  lawRelated = mergeLawIds(
+    lawRelated,
+    getLawIdsInContent(contentText, lawNumber),
   );
 
   lawDaySign = lawDaySign.includes('/')?addDaysToDate(lawDaySign, 0):new Date(lawDaySign);
@@ -1894,6 +1925,7 @@ module.exports = {
   getArrangeUnitPublic,
   getLawDayActive,
   getLawRelated,
+  getLawIdsInContent,
   RemoveNoOrder,
   convertPartOne,
   convertPartTwo,

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  congbobanan.toaan.gov.vn không gửi kèm chứng chỉ trung gian "GlobalSign RSA OV SSL CA 2018"
+  (Chrome tự tải qua AIA, OkHttp/Android thì không -> lỗi SSL). Tin thêm chứng chỉ đó cho riêng tên miền này
+  (res/raw/gsrsaovsslca2018.pem, hết hạn 21/11/2028).
+  Bản main: cleartext=false. Có file này thì Android bỏ qua android:usesCleartextTraffic.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config>
+        <domain includeSubdomains="false">congbobanan.toaan.gov.vn</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/gsrsaovsslca2018" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

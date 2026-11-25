@@ -12,7 +12,7 @@ import { CHECK_BUTTONS, URL_MAP } from "./config";
 import { check } from "./api";
 import { load, save } from "./session";
 
-const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw, onOpenConfig, onOpenDefaultLaws }, ref) {
+const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw }, ref) {
   // danh sách lần check gần nhất lưu xuống máy (app bị tắt khi chạy nền vẫn còn)
   const [saved] = useState(() => load("check") || {});
   const [url, setUrl] = useState(saved.url || "");
@@ -57,14 +57,6 @@ const CheckScreen = forwardRef(function CheckScreen({ onOpenLaw, onOpenConfig, o
     <View style={styles.container}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>Kiểm tra văn bản mới</Text>
-        <View style={styles.titleActions}>
-          <TouchableOpacity onPress={onOpenDefaultLaws}>
-            <Text style={styles.configBtn}>⬇ Tải sẵn</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onOpenConfig}>
-            <Text style={styles.configBtn}>⚙ AppConfig</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       <TextInput

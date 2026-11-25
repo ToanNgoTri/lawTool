@@ -279,9 +279,13 @@ export default function AppConfigScreen({ onBack }) {
     <View style={{ flex: 1, backgroundColor: "#141414" }}>
       <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={onBack}>
-            <Text style={styles.back}>← Danh sách</Text>
-          </TouchableOpacity>
+          {onBack ? (
+            <TouchableOpacity onPress={onBack}>
+              <Text style={styles.back}>← Danh sách</Text>
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
           <TouchableOpacity onPress={reload} disabled={loading}>
             <Text style={styles.reload}>↻ Tải lại</Text>
           </TouchableOpacity>

@@ -11,14 +11,18 @@
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.86.0",
+    "cheerio": "^1.2.0",
     "react": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-blob-util": "^1.1.1",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-modules": "^0.37.1",
+    "react-native-pdf": "^7.0.5",
     "react-native-safe-area-context": "^5.5.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@babel/plugin-transform-export-namespace-from": "^7.29.15",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@react-native-community/cli": "20.1.0",

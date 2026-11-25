@@ -9,6 +9,8 @@
 //  - "law:<url>"        : { raw, scraped, tableBase, showDetail, exists, pushed } (LawScreen)
 //  - "law:<url>:result" : kết quả processLaw (lưu riêng, chỉ khi có kết quả mới)
 //  - "lawKeys"          : danh sách url đã lưu, mới nhất cuối — giữ tối đa MAX_LAWS
+//  - "banAn"            : { loc, kq } bộ lọc + kết quả tra cứu bản án (BanAnScreen)
+//  - "banAnDM:<khóa>"   : danh mục tội danh / tòa án đã tải, hạn 3 ngày (banAnNguon.js)
 import { createMMKV } from "react-native-mmkv";
 
 const MAX_LAWS = 5;

@@ -26,7 +26,19 @@ sumChapterArray[0] = 0;
 let sumChapterPrevious;
 let eachSectionWithChapter = [];
 
-export default function Detail5View({ content, info, tables, onBack, onReload, onPush, pushing, pushed, exists, onDone }) {
+// Chữ trên nút Push khi đang đẩy, theo tiến trình server báo về (GET /pushProgress).
+function pushLabel(p) {
+  if (!p || p.stage === "start") return "Đang push...";
+  if (p.stage === "embed" && p.total) {
+    const pct = Math.floor((p.done / p.total) * 100);
+    return `${p.done}/${p.total} chunk (${pct}%)${p.failed ? ` · lỗi ${p.failed}` : ""}`;
+  }
+  if (p.stage === "mongo") return `Đang lưu ${p.total || ""} chunk...`;
+  if (p.stage === "done") return "Sắp xong...";
+  return "Đang push...";
+}
+
+export default function Detail5View({ content, info, tables, onBack, onReload, onPush, pushing, pushProgress, pushed, exists, onDone }) {
   // Chuẩn hoá data về đúng dạng Content/Info như bản gốc.
   const Content = Array.isArray(content) ? content : Object.values(content || {});
   const Info = info || {};
@@ -448,7 +460,7 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
           >
             {pushing && <ActivityIndicator size="small" color="white" />}
             <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>
-              {pushed ? "✓ Thành công" : pushing ? "Đang push..." : exists ? "Push (ghi đè)" : "Push"}
+              {pushed ? "✓ Thành công" : pushing ? pushLabel(pushProgress) : exists ? "Push (ghi đè)" : "Push"}
             </Text>
           </TouchableOpacity>
 

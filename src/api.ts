@@ -116,6 +116,7 @@ export async function pushLaw(payload: {
   fullText: string;
   tables?: LawTableData[];
   force?: boolean;
+  jobId?: string; // để theo dõi tiến trình qua getPushProgress
 }): Promise<{
   success: boolean;
   duplicate?: boolean;
@@ -134,6 +135,25 @@ export async function pushLaw(payload: {
   const json = await res.json();
   if (!res.ok && !json.duplicate) throw new Error(json.error || `HTTP ${res.status}`);
   return json;
+}
+
+// GET /pushProgress -> tiến trình của 1 lần pushLaw (theo jobId app tự tạo).
+//   stage: "start" | "embed" (đang embed done/total chunk) | "mongo" | "done" | "error"
+export type PushProgress = {
+  found: boolean;
+  stage?: "start" | "embed" | "mongo" | "done" | "error";
+  done?: number;
+  total?: number;
+  failed?: number;
+  error?: string;
+};
+
+export async function getPushProgress(jobId: string): Promise<PushProgress> {
+  return (await getJSON(`pushProgress?jobId=${encodeURIComponent(jobId)}`)) as PushProgress;
+}
+
+export function newJobId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 // ─── AppConfig (LawMachine.AppConfig) ───────────────────────────────────────────

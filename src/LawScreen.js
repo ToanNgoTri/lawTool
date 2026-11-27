@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   AppState,
 } from "react-native";
-import { scrapeLaw, processLaw, pushLaw, checkExists } from "./api";
+import { scrapeLaw, processLaw, pushLaw, checkExists, getPushProgress, newJobId } from "./api";
 import Detail5View from "./Detail5View";
 import { syncEditedTables } from "./lawTables";
 import { loadLaw, saveLaw, saveLawResult, clearLaw } from "./session";
@@ -76,6 +76,8 @@ export default function LawScreen({ url, onBack, onPushed }) {
   const [busy, setBusy] = useState(saved ? "" : "scrape");
   const [error, setError] = useState("");
   const [pushed, setPushed] = useState(() => !!saved?.pushed);
+  // Tiến trình push từ server: { stage, done, total, failed } (null = chưa có).
+  const [pushProgress, setPushProgress] = useState(null);
   const scrollRef = useRef(null);
   // Bản scrape gốc — làm ĐẦU VÀO convert cho lawDaySign/lawDescription (form giữ bản đã convert).
   const scrapedRef = useRef(saved?.scraped || scrapedBase(EMPTY));
@@ -267,6 +269,21 @@ export default function LawScreen({ url, onBack, onPushed }) {
     if (!processed || !info) return;
     setBusy("push");
     setError("");
+    setPushProgress(null);
+    // Hỏi tiến trình mỗi giây trong lúc chờ pushLaw (nó chỉ trả kết quả khi xong hẳn).
+    const jobId = newJobId();
+    let polling = true;
+    const poll = async () => {
+      while (polling) {
+        await new Promise((r) => setTimeout(r, 1000));
+        if (!polling) break;
+        try {
+          const p = await getPushProgress(jobId);
+          if (polling && p.found) setPushProgress(p);
+        } catch (_) {} // mất 1 lần hỏi thì thôi, lần sau hỏi lại
+      }
+    };
+    poll();
     try {
       const r = await pushLaw({
         lawInfo: info,
@@ -274,6 +291,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
         fullText: processed.fullText,
         tables: processed.tables,
         force,
+        jobId,
       });
       if (r.duplicate) {
         Alert.alert("Đã có rồi", `${r.lawNumberForPush} đã tồn tại. Ghi đè?`, [
@@ -296,6 +314,8 @@ export default function LawScreen({ url, onBack, onPushed }) {
       setError(e.message || String(e));
       Alert.alert("Lỗi push", e.message || String(e));
     } finally {
+      polling = false;
+      setPushProgress(null);
       setBusy("");
     }
   }
@@ -412,6 +432,7 @@ export default function LawScreen({ url, onBack, onPushed }) {
         info={mergedInfo() || processed.lawInfo}
         exists={exists}
         pushing={busy === "push"}
+        pushProgress={pushProgress}
         pushed={pushed}
         onBack={() => setShowDetail(false)}
         onReload={() => runProcess(raw)}

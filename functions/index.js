@@ -266,14 +266,21 @@ exports.pushLaw = onRequest(
         await removeExisting(dbm, lawNumberForPush); // ghi đè: xoá bản cũ trước
       }
 
-      // 1) Embed toàn bộ chunk (gọi Ollama — hiện trỏ localhost:11434 trong convert.js)
+      // Tiến trình cho app (GET /pushProgress?jobId=...). Không có jobId -> bỏ qua.
+      const progress = makeProgressWriter(dbm, req.body.jobId, lawNumberForPush);
+
+      // 1) Embed toàn bộ chunk (Worker law-embed — xem embedText trong convert.js)
       const law = { info: lawInfo, content: data };
-      const chunks = await convert.processAllLaws(law);
+      const chunks = await convert.processAllLaws(law, ({ done, total, failed }) =>
+        progress.set({ stage: "embed", done, total, failed }),
+      );
       if (!chunks || chunks.length === 0) {
+        await progress.set({ stage: "error", error: "Không tạo được chunk nào để embed" }, true);
         return res.status(500).json({ success: false, error: "Không tạo được chunk nào để embed" });
       }
 
       // 2) Push chunks -> MongoDB ragdb.chunks (bắt lỗi riêng để lộ vì sao chunk không lên)
+      await progress.set({ stage: "mongo" }, true);
       let chunksOk = false;
       let chunksError = null;
       try {
@@ -298,6 +305,7 @@ exports.pushLaw = onRequest(
         _lawPairCache[lawNumberForPush] = lawInfo.lawDescription || "";
       }
 
+      await progress.set({ stage: "done" }, true);
       res.json({
         success: chunksOk && mongoOk,
         lawNumberForPush,
@@ -311,6 +319,53 @@ exports.pushLaw = onRequest(
     }
   },
 );
+
+// ─── Tiến trình pushLaw ─────────────────────────────────────────────────────────
+// pushLaw ghi tiến trình vào LawMachine.PushProgress (_id = jobId do app tạo); app
+// hỏi GET /pushProgress mỗi giây để hiện "đã đẩy X / Y chunk". Ghi tối đa
+// 1 lần/700ms (force=true: ghi ngay, dùng cho các mốc chuyển giai đoạn). Lỗi ghi
+// tiến trình KHÔNG được làm hỏng việc push.
+const VALID_JOB_ID = /^[A-Za-z0-9_-]{8,64}$/;
+const PROGRESS_MIN_MS = 700;
+
+function makeProgressWriter(dbm, jobId, lawId) {
+  if (!VALID_JOB_ID.test(String(jobId || ""))) return { set: async () => {} };
+  const col = dbm.collection("PushProgress");
+  // Dọn bản ghi cũ hơn 1 ngày (fire-and-forget).
+  col.deleteMany({ updatedAt: { $lt: new Date(Date.now() - 86400000) } }).catch(() => {});
+  let state = { lawId, stage: "start", done: 0, total: 0, failed: 0 };
+  let lastWrite = 0;
+  let chain = Promise.resolve();
+  return {
+    set(fields, force = false) {
+      state = { ...state, ...fields };
+      const now = Date.now();
+      if (!force && now - lastWrite < PROGRESS_MIN_MS) return chain;
+      lastWrite = now;
+      const snapshot = { ...state, updatedAt: new Date() };
+      // Ghi tuần tự để bản cũ không đè bản mới.
+      chain = chain
+        .then(() => col.updateOne({ _id: jobId }, { $set: snapshot }, { upsert: true }))
+        .catch((e) => console.warn("PushProgress:", e.message));
+      return chain;
+    },
+  };
+}
+
+// GET /pushProgress?jobId=... -> { found, stage, done, total, failed, lawId, error? }
+exports.pushProgress = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  try {
+    const jobId = String(req.query.jobId || "");
+    if (!VALID_JOB_ID.test(jobId)) return res.status(400).json({ found: false, error: "jobId sai" });
+    const client = await getMongo();
+    const doc = await client.db("LawMachine").collection("PushProgress").findOne({ _id: jobId });
+    if (!doc) return res.json({ found: false });
+    const { _id, updatedAt, ...rest } = doc;
+    res.json({ found: true, ...rest });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});
 
 // ─── Ghi chunk (embedding) vào MongoDB ragdb.chunks ───────────────────────────
 // $vectorSearch cần `embedding` là MẢNG số thường (không phải kiểu vector đặc biệt

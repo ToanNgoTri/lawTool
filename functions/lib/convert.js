@@ -1832,17 +1832,40 @@ function extractChunksFromLaw(law) {
 const OLLAMA_EMBED_URL =
   process.env.OLLAMA_EMBED_URL || "https://ollama.pixelplaces.net/api/embed";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "bge-m3";
+// Key cho endpoint có bảo vệ (Cloudflare Worker embed-worker/). Ollama bỏ qua header này.
+const OLLAMA_EMBED_KEY = process.env.OLLAMA_EMBED_KEY || "";
 
-async function embedText(text) {
+// Thử lại khi lỗi mạng / 5xx (Workers AI thỉnh thoảng trả "3046: Request timeout").
+async function embedText(text, attempts = 3) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await embedTextOnce(text);
+    } catch (err) {
+      lastErr = err;
+      if (err.status && err.status < 500) break; // 4xx (sai key, body...) -> không thử lại
+      if (i < attempts) await new Promise((r) => setTimeout(r, 1000 * i));
+    }
+  }
+  throw lastErr;
+}
+
+async function embedTextOnce(text) {
   const isLegacy = /\/api\/embeddings\/?$/.test(OLLAMA_EMBED_URL);
+  const headers = { "Content-Type": "application/json" };
+  if (OLLAMA_EMBED_KEY) headers["x-key"] = OLLAMA_EMBED_KEY;
   const res = await fetch(OLLAMA_EMBED_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(
       isLegacy ? { model: OLLAMA_MODEL, prompt: text } : { model: OLLAMA_MODEL, input: text },
     ),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}: ${await res.text()}`);
+    err.status = res.status;
+    throw err;
+  }
   const data = await res.json();
   const v = isLegacy ? data.embedding : data.embeddings && data.embeddings[0];
   if (!Array.isArray(v) || v.length === 0) {
@@ -1854,7 +1877,9 @@ async function embedText(text) {
 // ─── processAllLaws — trả về mảng chunks đã embed, không ghi DB ───────────────
 let isRunning = false;
 
-async function processAllLaws(law) {
+// onProgress({ done, total, failed }) được gọi sau MỖI chunk (đã embed hoặc lỗi)
+// để pushLaw ghi tiến trình cho app hiển thị "đã đẩy X / Y chunk".
+async function processAllLaws(law, onProgress) {
   if (isRunning) {
     console.warn("⚠️ processAllLaws đang chạy rồi, bỏ qua request này");
     return [];
@@ -1874,25 +1899,31 @@ async function processAllLaws(law) {
 
     // console.log('allChunks',allChunks);
 
-    for (let i = 0; i < allChunks.length; i++) {
-      const obj = allChunks[i];
-      if (!obj?.fullText) continue;
+    // Chỉ đếm chunk có nội dung (chunk rỗng bị bỏ qua, không tính vào tổng).
+    const todo = (allChunks || []).filter((o) => o?.fullText);
+    const total = todo.length;
+    let failed = 0;
+    const report = (done) => {
+      if (!onProgress) return;
+      try {
+        onProgress({ done, total, failed });
+      } catch (_) {}
+    };
+    report(0);
 
+    for (let i = 0; i < todo.length; i++) {
+      const obj = todo[i];
       const textToEmbed = obj.textChunk ?? obj.fullText;
 
       try {
         obj.embedding = await embedText(textToEmbed);
-        console.log(
-          `${i + 1}/${allChunks.length} chunk embedding:`,
-          obj.embedding[1],
-        );
+        console.log(`${i + 1}/${total} chunk embedding:`, obj.embedding[1]);
+        result.push(obj);
       } catch (err) {
+        failed++;
         console.error(`❌ Embed lỗi `, err);
-        continue;
       }
-      // console.log(`  obj`,obj);
-      result.push(obj);
-      // console.log(`  ✅ chunk [${i}/${allChunks.length - 1}]`);
+      report(i + 1);
     }
 
     // console.log(`🎉 Hoàn tất `,result);

@@ -38,6 +38,34 @@ function pushLabel(p) {
   return "Đang push...";
 }
 
+// Thanh tiến trình to ngang màn hình trong lúc push (số liệu từ GET /pushProgress).
+function PushProgressBar({ p, marginTop = 0 }) {
+  const embedding = p?.stage === "embed" && p.total > 0;
+  const ratio =
+    p?.stage === "mongo" || p?.stage === "done" ? 1 : embedding ? p.done / p.total : 0;
+  let text = "Đang gửi lên server...";
+  if (embedding) {
+    text = `Đang embed ${p.done}/${p.total} chunk (${Math.floor(ratio * 100)}%)`;
+  } else if (p?.stage === "mongo") {
+    text = `Đã embed ${p.total} chunk — đang lưu vào CSDL...`;
+  } else if (p?.stage === "done") {
+    text = `Đã lưu ${p.total} chunk — sắp xong...`;
+  }
+  return (
+    <View style={{ backgroundColor: "#0B3D1E", paddingHorizontal: 12, paddingVertical: 8, marginTop, zIndex: 99 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+        <Text style={{ color: "white", fontSize: 14, fontWeight: "700" }}>{text}</Text>
+        {!!p?.failed && (
+          <Text style={{ color: "#FFB4A9", fontSize: 13, fontWeight: "700" }}>Lỗi {p.failed} chunk</Text>
+        )}
+      </View>
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.2)", overflow: "hidden" }}>
+        <View style={{ height: 8, width: `${Math.round(ratio * 100)}%`, backgroundColor: "#4CAF50" }} />
+      </View>
+    </View>
+  );
+}
+
 export default function Detail5View({ content, info, tables, onBack, onReload, onPush, pushing, pushProgress, pushed, exists, onDone }) {
   // Chuẩn hoá data về đúng dạng Content/Info như bản gốc.
   const Content = Array.isArray(content) ? content : Object.values(content || {});
@@ -486,6 +514,8 @@ export default function Detail5View({ content, info, tables, onBack, onReload, o
             </Text>
           </View>
         )}
+
+        {pushing && <PushProgressBar p={pushProgress} marginTop={exists ? 0 : insets.top} />}
 
         {Boolean(Content.length) ? (
           <View

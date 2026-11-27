@@ -270,12 +270,12 @@ export default function LawScreen({ url, onBack, onPushed }) {
     setBusy("push");
     setError("");
     setPushProgress(null);
-    // Hỏi tiến trình mỗi giây trong lúc chờ pushLaw (nó chỉ trả kết quả khi xong hẳn).
+    // Hỏi tiến trình ~0,7s/lần trong lúc chờ pushLaw (nó chỉ trả kết quả khi xong hẳn).
     const jobId = newJobId();
     let polling = true;
     const poll = async () => {
       while (polling) {
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 700)); // = nhịp server ghi (PROGRESS_MIN_MS)
         if (!polling) break;
         try {
           const p = await getPushProgress(jobId);

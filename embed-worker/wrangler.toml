@@ -5,4 +5,13 @@ compatibility_date = "2025-06-01"
 [ai]
 binding = "AI"
 
+# Đếm neuron LLM đã dùng mỗi ngày (key llm:YYYY-MM-DD, UTC) để chừa phần còn lại cho embedding.
+[[kv_namespaces]]
+binding = "LLM_USAGE"
+id = "969d49724b6e4c9ab88d9cf0c791dee5"
+
+[vars]
+# LLM chỉ được dùng tối đa chừng này neuron/ngày (gói free 10.000/ngày, dùng chung với embedding).
+LLM_NEURON_CAP = "5000"
+
 # Secret (không ghi ở đây): npx wrangler secret put API_KEY

@@ -12,8 +12,12 @@
 //   - [A] USB adb reverse:     http://localhost:5001/lawtool-f8b15/asia-southeast1
 //   - [B] WiFi (IP PC):        http://192.168.80.11:5001/lawtool-f8b15/asia-southeast1
 //   - Đã deploy (Ollama remote): https://asia-southeast1-lawtool-f8b15.cloudfunctions.net
-export const FUNCTIONS_BASE_URL =
-  "https://asia-southeast1-lawtool-f8b15.cloudfunctions.net";
+//   - VM Oracle qua Cloudflare Worker (mặc định từ 2026-11-28; Worker tự chuyển về
+//     Firebase nếu VM lỗi — xem D:\Code\lawApiHost\worker):
+//                              https://lawapi.lawmachine.workers.dev/tool
+export const FUNCTIONS_BASE_URL = "https://lawapi.lawmachine.workers.dev/tool";
+// export const FUNCTIONS_BASE_URL =
+//   "https://asia-southeast1-lawtool-f8b15.cloudfunctions.net";
 // export const FUNCTIONS_BASE_URL =
 //   "http://192.168.80.11:5001/lawtool-f8b15/asia-southeast1";
 
